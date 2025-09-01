@@ -1,0 +1,66 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    },
+    {
+      "src": "api/**/*.{js,ts}",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/health",
+      "dest": "/api/health.ts"
+    },
+    {
+      "src": "/api/orders",
+      "dest": "/api/orders.ts"
+    },
+    {
+      "src": "/api/validation",
+      "dest": "/api/validation.ts"
+    },
+    {
+      "src": "/api/shop",
+      "dest": "/api/shop.ts"
+    },
+    {
+      "src": "/api/promptFiles",
+      "dest": "/api/promptFiles.ts"
+    },
+    {
+      "src": "/api/archive",
+      "dest": "/api/archive.ts"
+    },
+    {
+      "src": "/api/test",
+      "dest": "/api/test.ts"
+    },
+    {
+      "src": "/api/hello",
+      "dest": "/api/hello.js"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

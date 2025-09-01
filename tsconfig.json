@@ -1,0 +1,53 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    // Configuración básica de TypeScript
+    "strict": true, // Habilita todos los modos estrictos
+    "noImplicitAny": true, // Error en tipos any implícitos
+    "strictNullChecks": true, // Activamos chequeo estricto de null
+    "alwaysStrict": true, // Genera "use strict" en todos los archivos.
+    "noUnusedLocals": true, // Marca error si hay variables locales sin usar.
+    "noUnusedParameters": true, // Marca error si hay parámetros de función sin usar.
+    "noImplicitReturns": true, // Error si no se retorna valor en todos los caminos de una función.
+    "noFallthroughCasesInSwitch": true, // Evita que un case salte al siguiente sin break/return/throw.
+    "forceConsistentCasingInFileNames": true, // Consistencia en mayúsculas/minúsculas en imports de archivos.
+    // Paths
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    // Configuraciones adicionales para transición suave
+    "allowJs": true, // Permite archivos JavaScript
+    "checkJs": false, // No verificar archivos JS
+    "esModuleInterop": true, // Mejor compatibilidad con módulos
+    "allowSyntheticDefaultImports": true
+  },
+  "include": [
+    "src/**/*"
+  ], // explicitly include your source files
+  "exclude": [
+    "node_modules",
+    "dist"
+  ], // exclude common directories
+  "references": [
+    {
+      "path": "./tsconfig.node.json"
+    }
+  ]
+}

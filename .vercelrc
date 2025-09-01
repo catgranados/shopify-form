@@ -1,0 +1,11 @@
+# Configuración para Vercel Dev
+# Este archivo le dice a Vercel cómo ejecutar el proyecto localmente
+
+{
+  "env": {
+    "API_SECRET_KEY": "@api-secret-key",
+    "SHOPIFY_SHOP_DOMAIN": "@shopify-store-url", 
+    "SHOPIFY_ACCESS_TOKEN": "@shopify-access-token",
+    "SHOPIFY_API_VERSION": "@shopify-api-version"
+  }
+}
