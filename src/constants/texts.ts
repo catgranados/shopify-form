@@ -37,8 +37,10 @@ const FormTexts = {
     orderDate: "Fecha de pedido:",
     orderStatus: "Estado del pedido:",
     unloadedDataMsg: `Para obtener tu documento debes tener el <strong>Número de pedido</strong> y el <strong>Código de confirmación</strong> generados al adquirir el servicio.`,
-    unpaidOrderMsg: "Este pedido aún no ha sido pagado. Para procesar tu documento, el pedido debe estar en estado 'Pagado'.",
-    unpaidOrderSuggestion: "Por favor verifica que el pago haya sido procesado correctamente. Si consideras que hay un error, contáctanos a través de",
+    unpaidOrderMsg:
+      "Este pedido aún no ha sido pagado. Para procesar tu documento, el pedido debe estar en estado 'Pagado'.",
+    unpaidOrderSuggestion:
+      "Por favor verifica que el pago haya sido procesado correctamente. Si consideras que hay un error, contáctanos a través de",
     processedDate: (date: string) =>
       `<strong>Fecha de procesamiento:</strong> ${new Date(
         date
@@ -171,6 +173,7 @@ const FormTexts = {
       typeComponent: "input",
       typeField: "text",
       label: "Entidad a quien se dirige la tutela",
+      fieldPlaceholder: "Ej. Alcaldía Municipal de Bogotá",
       required: true,
       errorMessage: "Por favor ingresa una entidad válida.",
       validators: [],
@@ -204,8 +207,10 @@ const FormTexts = {
       typeComponent: "textarea",
       label: "Derechos fundamentales protegidos por la tutela",
       required: false,
-      fieldPlaceholder: "Ej. Derecho a la salud, derecho a la vida, derecho al debido proceso...",
-      errorMessage: "Por favor describe los derechos fundamentales que se buscan proteger.",
+      fieldPlaceholder:
+        "Ej. Derecho a la salud, derecho a la vida, derecho al debido proceso...",
+      errorMessage:
+        "Por favor describe los derechos fundamentales que se buscan proteger.",
       validators: [],
       minLength: 10,
       maxLength: 1000,
@@ -321,7 +326,7 @@ const FormTexts = {
       fieldPlaceholder: "Ej. juanperez@example.com",
       errorMessage: "Por favor ingresa un correo electrónico válido.",
       validators: [],
-    } as FieldProps
+    } as FieldProps,
   },
   transito: {
     // Datos del Solicitante
@@ -507,7 +512,8 @@ const FormTexts = {
     isOwner: {
       id: "isOwner",
       typeComponent: "select",
-      label: "¿Es el solicitante el propietario del vehículo al momento del hecho?",
+      label:
+        "¿Es el solicitante el propietario del vehículo al momento del hecho?",
       required: true,
       errorMessage: "Por favor selecciona una opción.",
       validators: [],
@@ -545,7 +551,8 @@ const FormTexts = {
       typeComponent: "textarea",
       label: "Razón breve para no asistir presencialmente a la audiencia",
       required: true,
-      fieldPlaceholder: "Explique brevemente por qué no puede asistir presencialmente...",
+      fieldPlaceholder:
+        "Explique brevemente por qué no puede asistir presencialmente...",
       errorMessage: "Por favor ingresa una razón válida.",
       validators: [],
       minLength: 10,
@@ -556,7 +563,7 @@ const FormTexts = {
     currentErrors: (errorCount: number) => `Campos por revisar: ${errorCount}`,
     buttonText: (isLoading: boolean) =>
       isLoading ? "Generando..." : "Generar Documento Legal",
-    
+
     // Campos para el correo de entrega del documento
     deliveryEmail: {
       id: "deliveryEmail",
@@ -565,10 +572,11 @@ const FormTexts = {
       label: "Correo electrónico para recibir el documento",
       required: true,
       fieldPlaceholder: "Ej. mi.correo@email.com",
-      errorMessage: "Por favor ingresa un correo electrónico válido para recibir el documento.",
+      errorMessage:
+        "Por favor ingresa un correo electrónico válido para recibir el documento.",
       validators: [validators.required, validators.email],
     } as FieldProps,
-    
+
     usePreviousEmail: {
       id: "usePreviousEmail",
       typeComponent: "input",
