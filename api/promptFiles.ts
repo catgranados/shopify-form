@@ -1,7 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PromptFilesGraphQLResponse, PromptFilesServiceResponse, PromptFile, PromptFilesWithContentResponse, PromptFileWithContent } from '../src/types';
 import ShopifyService from './shopifyService.js';
-import { backendLogger } from "../src/lib/utils.ts";
+import backendLogger from "./lib/logger.js";
 
 const promptFilesLog = (...args: unknown[]) => {
   backendLogger("PROMPT FILES API", ...args);

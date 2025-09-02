@@ -3,7 +3,7 @@ import ShopifyService from './shopifyService.js';
 import {
   OrderValidationResponse
 } from "../src/types/index";
-import { backendLogger } from "../src/lib/utils.ts";
+import backendLogger from "./lib/logger.js";
 
 const validationLog = (...args: unknown[]) => {
   backendLogger('VALIDATION API', ...args);

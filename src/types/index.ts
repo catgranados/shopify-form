@@ -93,3 +93,7 @@ export interface PromptFilesWithContentResponse {
   promptFiles: Record<string, PromptFileWithContent>;
   message?: string;
 }
+
+export interface logger {
+  (origin: string, ...args: unknown[]): void;
+}

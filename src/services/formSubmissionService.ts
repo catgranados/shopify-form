@@ -67,50 +67,84 @@ class FormSubmissionService {
         webhookUrl: this.webhookUrl
       });
 
-      // Preparar contenido de prompt files de manera más robusta
-      let promptContentForPayload = {};
-      if (request.promptContent && Object.keys(request.promptContent).length > 0) {
-        // Construir un objeto con todos los prompt files disponibles
-        promptContentForPayload = Object.fromEntries(
-          Object.entries(request.promptContent).map(([key, promptData]) => [
-            key,
-            {
-              handle: promptData.handle,
-              name: promptData.name,
-              content: promptData.content
-            }
-          ])
-        );
-      }
-
       const payload = {
         formType: request.formType,
         formData: request.formData,
         orderData: request.orderData,
-        promptContent: promptContentForPayload,
+        promptContent: request.promptContent!.procedureType.content,
         deliveryEmail: request.deliveryEmail.trim(),
         shopName: request.shopName.trim(),
       };
 
       // Log del payload final para debugging
+      const payloadString = JSON.stringify(payload);
+      const payloadSizeKB = Math.round(payloadString.length / 1024 * 100) / 100;
+      
       formSubmitLog('📦 Payload final para webhook:', {
         formType: payload.formType,
         dataFieldsCount: Object.keys(payload.formData).length,
-        promptContentKeys: Object.keys(payload.promptContent),
+        promptContentLength: payload.promptContent!.length,
+        promptContentIsString: typeof payload.promptContent === 'string',
         hasDeliveryEmail: !!payload.deliveryEmail,
-        orderNumber: payload.orderData.orderNumber
+        orderNumber: payload.orderData.orderNumber,
+        payloadSizeKB: payloadSizeKB,
+        webhookUrl: this.webhookUrl
       });
 
-      const response = await fetch(this.webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
+      // Log adicional para debugging del error 400
+      formSubmitLog('🔍 Diagnostico adicional:', {
+        payloadSize: payloadString.length,
+        contentType: 'application/json',
+        method: 'POST',
+        hasPromptContent: payload.promptContent!.length > 0,
+        promptContentType: typeof payload.promptContent
       });
+
+      // Log una muestra del payload para comparar con versiones anteriores
+      const payloadSample = {
+        formType: payload.formType,
+        formDataKeys: Object.keys(payload.formData),
+        orderDataKeys: Object.keys(payload.orderData),
+        promptContentLength: payload.promptContent!.length,
+        deliveryEmail: payload.deliveryEmail.substring(0, 10) + '...',
+        shopName: payload.shopName
+      };
+      formSubmitLog('🔍 Estructura del payload:', payloadSample);
+      let response;
+      try {
+        formSubmitLog('📡 Iniciando fetch al webhook...');
+        response = await fetch(this.webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: payloadString,
+        });
+        formSubmitLog('📡 Fetch completado, status:', response.status);
+      } catch (fetchError) {
+        formSubmitLog('❌ Error en fetch:', fetchError);
+        throw new Error(`Error de red al conectar con webhook: ${fetchError instanceof Error ? fetchError.message : 'Error desconocido'}`);
+      }
 
       if (!response.ok) {
-        throw new Error(`Error del webhook: ${response.status} - ${response.statusText}`);
+        // Log detallado del error para diagnosticar
+        formSubmitLog('❌ Error del webhook:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: this.webhookUrl,
+          headers: Object.fromEntries(response.headers.entries())
+        });
+
+        // Intentar obtener el cuerpo de la respuesta de error
+        let errorBody = '';
+        try {
+          errorBody = await response.text();
+          formSubmitLog('📝 Cuerpo del error:', errorBody);
+        } catch {
+          formSubmitLog('⚠️ No se pudo leer el cuerpo del error');
+        }
+
+        throw new Error(`Error del webhook: ${response.status} - ${response.statusText}${errorBody ? ` - Detalle: ${errorBody}` : ''}`);
       }
 
       // Make.com webhooks pueden devolver diferentes formatos de respuesta
@@ -125,7 +159,7 @@ class FormSubmissionService {
           console.warn('⚠️ Response body ya fue consumido, usando respuesta por defecto');
           result = {
             success: true,
-            message: 'Formulario enviado exitosamente al webhook (body already used)',
+            message: 'Formulario enviado exitosamente',
             documentId: `WEBHOOK-${Date.now()}`
           };
         } else if (contentType && contentType.includes('application/json')) {
@@ -145,7 +179,7 @@ class FormSubmissionService {
             // Si no, creamos una respuesta exitosa basada en el status HTTP
             result = {
               success: true,
-              message: `Formulario enviado exitosamente al webhook. Respuesta: ${JSON.stringify(responseData)}`,
+              message: `Formulario enviado exitosamente. ${JSON.stringify(responseData)}`,
               documentId: responseData.documentId || `WEBHOOK-${Date.now()}`
             };
           }
@@ -154,7 +188,7 @@ class FormSubmissionService {
           const responseText = await response.text();
           result = {
             success: true,
-            message: `Formulario enviado exitosamente al webhook. Respuesta: ${responseText || 'Sin contenido'}`,
+            message: `Formulario enviado exitosamente. ${responseText || 'Sin contenido'}`,
             documentId: `WEBHOOK-${Date.now()}`
           };
         }
@@ -163,7 +197,7 @@ class FormSubmissionService {
         // Si no podemos parsear la respuesta, pero el status es OK
         result = {
           success: true,
-          message: 'Formulario enviado exitosamente al webhook (error parsing response)',
+          message: 'Formulario enviado exitosamente.',
           documentId: `WEBHOOK-${Date.now()}`
         };
       }
@@ -351,8 +385,51 @@ class FormSubmissionService {
   }
 
   /**
-   * Simula el envío del formulario (para testing)
+   * Prueba de conectividad con el webhook usando un payload mínimo
    */
+  async testWebhookConnectivity(): Promise<{ success: boolean; message: string }> {
+    try {
+      const testPayload = {
+        test: true,
+        timestamp: new Date().toISOString(),
+        message: 'Test de conectividad'
+      };
+
+      formSubmitLog('🧪 Probando conectividad del webhook...');
+      
+      const response = await fetch(this.webhookUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(testPayload),
+      });
+
+      formSubmitLog('🧪 Respuesta del test:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: `Test falló: ${response.status} - ${response.statusText}`
+        };
+      }
+
+      return {
+        success: true,
+        message: 'Webhook responde correctamente a payload mínimo'
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        message: `Error en test: ${error instanceof Error ? error.message : 'Error desconocido'}`
+      };
+    }
+  }
   async simulateSubmission(request: SubmitFormRequest): Promise<SubmitFormResponse> {
     formSubmitLog('🧪 Simulando envío de formulario...');
     formSubmitLog('📧 Email de entrega:', request.deliveryEmail);
@@ -374,5 +451,19 @@ class FormSubmissionService {
 
 // Instancia singleton
 export const formSubmissionService = new FormSubmissionService();
+
+// Función global para testing desde consola del navegador
+declare global {
+  interface Window {
+    testWebhook: () => Promise<{ success: boolean; message: string }>;
+  }
+}
+
+window.testWebhook = async () => {
+  console.log('🧪 Iniciando test de webhook...');
+  const result = await formSubmissionService.testWebhookConnectivity();
+  console.log('🧪 Resultado del test:', result);
+  return result;
+};
 
 export default formSubmissionService;

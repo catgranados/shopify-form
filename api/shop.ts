@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import ShopifyService from './shopifyService.js';
-import { backendLogger } from "../src/lib/utils.js";
+import backendLogger from "./lib/logger.js";
 
 interface ApiResponse {
   success: boolean;

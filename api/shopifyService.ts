@@ -1,5 +1,5 @@
 import { OrderData, ProcessedOrderData } from '../src/types/index';
-import { backendLogger } from "../src/lib/utils.ts";
+import backendLogger from "./lib/logger.js";
 
 const shopifyServiceLog = (...args: unknown[]) => {
   backendLogger('SHOPIFY SERVICE', ...args);

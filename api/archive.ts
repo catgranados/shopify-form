@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import ShopifyService from './shopifyService.js';
-import { backendLogger } from '../src/lib/utils.ts';
+import backendLogger from './lib/logger.js';
 
 interface ArchiveRequest {
   orderNumber: string;
