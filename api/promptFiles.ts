@@ -1,6 +1,11 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PromptFilesGraphQLResponse, PromptFilesServiceResponse, PromptFile, PromptFilesWithContentResponse, PromptFileWithContent } from '../src/types';
 import ShopifyService from './shopifyService.js';
+import { backendLogger } from "../src/lib/utils.ts";
+
+const promptFilesLog = (...args: unknown[]) => {
+  backendLogger("PROMPT FILES API", ...args);
+};
 
 // Instancia del servicio de Shopify
 const shopifyService = new ShopifyService();
@@ -54,18 +59,18 @@ function processPromptFilesResponse(response: PromptFilesGraphQLResponse): Promp
  */
 async function getPromptFiles(): Promise<PromptFilesServiceResponse> {
   try {
-    console.log('🔍 Consultando prompt files desde Shopify...');
+    promptFilesLog('🔍 Consultando prompt files desde Shopify...');
     
     const response = await shopifyService.executeGraphQLQuery<PromptFilesGraphQLResponse>(PROMPT_FILES_QUERY);
     
-    console.log('✅ Respuesta de Shopify recibida:', {
+    promptFilesLog('✅ Respuesta de Shopify recibida:', {
       totalFiles: response.data.metaobjects.edges.length,
       cost: response.extensions?.cost
     });
     
     const promptFiles = processPromptFilesResponse(response);
     
-    console.log('📁 Prompt files procesados:', promptFiles.map(file => ({
+    promptFilesLog('📁 Prompt files procesados:', promptFiles.map(file => ({
       name: file.name,
       useCase: file.useCase,
       handle: file.handle
@@ -103,7 +108,7 @@ async function getPromptFilesByUseCase(useCase: string): Promise<PromptFilesServ
       file => file.useCase.toLowerCase() === useCase.toLowerCase()
     );
     
-    console.log(`🎯 Prompt files filtrados por caso de uso "${useCase}":`, filteredFiles.length);
+    promptFilesLog(`🎯 Prompt files filtrados por caso de uso "${useCase}":`, filteredFiles.length);
     
     return {
       success: true,
@@ -137,7 +142,7 @@ async function getPromptFileByHandle(handle: string): Promise<PromptFile | null>
       file => file.handle === handle
     );
     
-    console.log(`🔍 Buscando prompt file con handle "${handle}":`, promptFile ? 'encontrado' : 'no encontrado');
+    promptFilesLog(`🔍 Buscando prompt file con handle "${handle}":`, promptFile ? 'encontrado' : 'no encontrado');
     
     return promptFile || null;
     
@@ -152,7 +157,7 @@ async function getPromptFileByHandle(handle: string): Promise<PromptFile | null>
  */
 async function downloadFileContent(fileUrl: string): Promise<string> {
   try {
-    console.log('📥 Descargando contenido del archivo:', fileUrl);
+    promptFilesLog('📥 Descargando contenido del archivo:', fileUrl);
     
     const response = await fetch(fileUrl);
     
@@ -161,7 +166,7 @@ async function downloadFileContent(fileUrl: string): Promise<string> {
     }
     
     const content = await response.text();
-    console.log('✅ Contenido descargado, tamaño:', content.length, 'caracteres');
+    promptFilesLog('✅ Contenido descargado, tamaño:', content.length, 'caracteres');
     
     return content;
   } catch (error) {
@@ -175,7 +180,7 @@ async function downloadFileContent(fileUrl: string): Promise<string> {
  */
 async function getPromptFilesWithContent(useCase: string): Promise<PromptFilesWithContentResponse> {
   try {
-    console.log(`🔍 Obteniendo prompt files con contenido para caso de uso: ${useCase}`);
+    promptFilesLog(`🔍 Obteniendo prompt files con contenido para caso de uso: ${useCase}`);
     
     // Obtener la lista de prompt files filtrada por caso de uso
     const promptFilesResponse = await getPromptFilesByUseCase(useCase);
@@ -193,7 +198,7 @@ async function getPromptFilesWithContent(useCase: string): Promise<PromptFilesWi
     // Procesar cada archivo
     for (const promptFile of promptFilesResponse.promptFiles) {
       try {
-        console.log(`📁 Procesando archivo: ${promptFile.handle}`);
+        promptFilesLog(`📁 Procesando archivo: ${promptFile.handle}`);
         
         // Obtener URL del archivo
         const fileUrl = await shopifyService.getGenericFileUrl(promptFile.fileId);
@@ -213,7 +218,7 @@ async function getPromptFilesWithContent(useCase: string): Promise<PromptFilesWi
           content: content
         };
         
-        console.log(`✅ Archivo procesado: ${promptFile.handle}`);
+        promptFilesLog(`✅ Archivo procesado: ${promptFile.handle}`);
         
       } catch (error) {
         console.error(`❌ Error procesando archivo ${promptFile.handle}:`, error);
@@ -222,7 +227,7 @@ async function getPromptFilesWithContent(useCase: string): Promise<PromptFilesWi
     }
     
     const processedCount = Object.keys(promptFilesWithContent).length;
-    console.log(`🎯 Archivos procesados: ${processedCount}/${promptFilesResponse.promptFiles.length}`);
+    promptFilesLog(`🎯 Archivos procesados: ${processedCount}/${promptFilesResponse.promptFiles.length}`);
     
     return {
       success: true,
@@ -271,7 +276,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const { useCase, handle, withContent } = req.query;
 
-    console.log('📄 Procesando solicitud de prompt files:', {
+    promptFilesLog('📄 Procesando solicitud de prompt files:', {
       useCase: useCase || 'todos',
       handle: handle || 'ninguno',
       withContent: withContent || 'false',
@@ -280,7 +285,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Si se especifica un handle, buscar ese archivo específico
     if (handle && typeof handle === 'string') {
-      console.log(`🔍 Buscando prompt file con handle: ${handle}`);
+      promptFilesLog(`🔍 Buscando prompt file con handle: ${handle}`);
       
       const promptFile = await getPromptFileByHandle(handle);
       
@@ -300,7 +305,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Si se especifica un caso de uso con contenido
     if (useCase && typeof useCase === 'string' && withContent === 'true') {
-      console.log(`🎯 Obteniendo prompt files con contenido para caso de uso: ${useCase}`);
+      promptFilesLog(`🎯 Obteniendo prompt files con contenido para caso de uso: ${useCase}`);
       
       const result = await getPromptFilesWithContent(useCase);
       
@@ -309,7 +314,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Si se especifica un caso de uso sin contenido
     if (useCase && typeof useCase === 'string') {
-      console.log(`🎯 Filtrando prompt files por caso de uso: ${useCase}`);
+      promptFilesLog(`🎯 Filtrando prompt files por caso de uso: ${useCase}`);
       
       const result = await getPromptFilesByUseCase(useCase);
       
@@ -317,7 +322,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Obtener todos los prompt files
-    console.log('📁 Obteniendo todos los prompt files...');
+    promptFilesLog('📁 Obteniendo todos los prompt files...');
     
     const result = await getPromptFiles();
     

@@ -1,11 +1,9 @@
 import { OrderData, ProcessedOrderData } from '../src/types/index';
+import { backendLogger } from "../src/lib/utils.ts";
 
-
-const log = (...args: unknown[]) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [SHOPIFY SERVICE]`, ...args);
+const shopifyServiceLog = (...args: unknown[]) => {
+  backendLogger('SHOPIFY SERVICE', ...args);
 };
-
 
 interface ShopifyOrder {
   id: string;
@@ -108,7 +106,7 @@ class ShopifyService {
     this.apiVersion = process.env.SHOPIFY_API_VERSION || "2024-07";
     this.baseUrl = `${this.shopDomain}/admin/api/${this.apiVersion}/graphql.json`;
 
-    log("🔧 ShopifyService initialized", {
+    shopifyServiceLog("🔧 ShopifyService initialized", {
       shopDomain: this.shopDomain ? "✅" : "❌",
       accessToken: this.accessToken ? "✅" : "❌",
       apiVersion: this.apiVersion,
@@ -116,7 +114,7 @@ class ShopifyService {
     });
 
     if (!this.shopDomain || !this.accessToken) {
-      log("❌ Missing Shopify configuration");
+      shopifyServiceLog("❌ Missing Shopify configuration");
       throw new Error("Missing Shopify configuration in environment variables");
     }
   }
@@ -134,18 +132,18 @@ class ShopifyService {
     `;
 
     try {
-      log("🏪 Fetching shop name...");
+      shopifyServiceLog("🏪 Fetching shop name...");
       const response = await this.makeGraphQLRequest(query);
       
       if (response.data?.shop?.name) {
-        log("✅ Shop name retrieved:", response.data.shop.name);
+        shopifyServiceLog("✅ Shop name retrieved:", response.data.shop.name);
         return response.data.shop.name;
       } else {
-        log("⚠️ No shop name found in response");
+        shopifyServiceLog("⚠️ No shop name found in response");
         return "CG Asesores";
       }
     } catch (error) {
-      log("❌ Error fetching shop name:", error);
+      shopifyServiceLog("❌ Error fetching shop name:", error);
       return "CG Asesores";
     }
   }
@@ -155,7 +153,7 @@ class ShopifyService {
    */
   async executeGraphQLQuery<T = unknown>(query: string): Promise<T> {
     try {
-      log("📤 Executing custom GraphQL query...");
+      shopifyServiceLog("📤 Executing custom GraphQL query...");
       
       const response = await fetch(this.baseUrl, {
         method: "POST",
@@ -171,11 +169,11 @@ class ShopifyService {
       }
 
       const data: T = await response.json();
-      log("✅ Custom GraphQL query executed successfully");
+      shopifyServiceLog("✅ Custom GraphQL query executed successfully");
       
       return data;
     } catch (error) {
-      log("❌ Error in custom GraphQL query:", error);
+      shopifyServiceLog("❌ Error in custom GraphQL query:", error);
       throw error;
     }
   }
@@ -195,7 +193,7 @@ class ShopifyService {
     `;
 
     try {
-      log("📁 Getting file URL for:", fileId);
+      shopifyServiceLog("📁 Getting file URL for:", fileId);
       
       const response = await this.executeGraphQLQuery<{
         data: {
@@ -208,14 +206,14 @@ class ShopifyService {
       const fileUrl = response.data?.node?.url;
       
       if (fileUrl) {
-        log("✅ File URL obtained:", fileUrl);
+        shopifyServiceLog("✅ File URL obtained:", fileUrl);
         return fileUrl;
       } else {
-        log("⚠️ No URL found for file:", fileId);
+        shopifyServiceLog("⚠️ No URL found for file:", fileId);
         return null;
       }
     } catch (error) {
-      log("❌ Error getting file URL:", error);
+      shopifyServiceLog("❌ Error getting file URL:", error);
       return null;
     }
   }
@@ -228,10 +226,10 @@ class ShopifyService {
     variables?: Record<string, unknown>
   ): Promise<ShopifyGraphQLResponse> {
     try {
-      log("📤 Making GraphQL request to:", this.baseUrl);
-      log("📝 Query:", query.slice(0, 200) + "...");
+      shopifyServiceLog("📤 Making GraphQL request to:", this.baseUrl);
+      shopifyServiceLog("📝 Query:", query.slice(0, 200) + "...");
       if (variables) {
-        log("📝 Variables:", variables);
+        shopifyServiceLog("📝 Variables:", variables);
       }
 
       const body = variables 
@@ -247,22 +245,22 @@ class ShopifyService {
         body,
       });
 
-      log("📥 Response status:", response.status, response.statusText);
+      shopifyServiceLog("📥 Response status:", response.status, response.statusText);
 
       if (!response.ok) {
-        log("❌ HTTP error:", response.status);
+        shopifyServiceLog("❌ HTTP error:", response.status);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data: ShopifyGraphQLResponse = await response.json();
-      log("📦 Response data:", {
+      shopifyServiceLog("📦 Response data:", {
         hasData: !!data.data,
         ordersCount: data.data?.orders?.edges?.length || 0,
         hasErrors: !!(data.errors && data.errors.length > 0),
       });
 
       if (data.errors && data.errors.length > 0) {
-        log("❌ GraphQL errors:", data.errors);
+        shopifyServiceLog("❌ GraphQL errors:", data.errors);
         throw new Error(
           `GraphQL Error: ${data.errors.map((e) => e.message).join(", ")}`
         );
@@ -270,7 +268,7 @@ class ShopifyService {
 
       return data;
     } catch (error) {
-      log("❌ Error in GraphQL request:", error);
+      shopifyServiceLog("❌ Error in GraphQL request:", error);
       throw error;
     }
   }
@@ -282,8 +280,8 @@ class ShopifyService {
     query: string
   ): Promise<MetaobjectByHandleResponse> {
     try {
-      log("📤 Making Metaobject GraphQL request to:", this.baseUrl);
-      log("📝 Query:", query.slice(0, 200) + "...");
+      shopifyServiceLog("📤 Making Metaobject GraphQL request to:", this.baseUrl);
+      shopifyServiceLog("📝 Query:", query.slice(0, 200) + "...");
 
       const response = await fetch(this.baseUrl, {
         method: "POST",
@@ -294,22 +292,22 @@ class ShopifyService {
         body: JSON.stringify({ query }),
       });
 
-      log("📥 Response status:", response.status, response.statusText);
+      shopifyServiceLog("📥 Response status:", response.status, response.statusText);
 
       if (!response.ok) {
-        log("❌ HTTP error:", response.status);
+        shopifyServiceLog("❌ HTTP error:", response.status);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data: MetaobjectByHandleResponse = await response.json();
-      log("📦 Metaobject response data:", {
+      shopifyServiceLog("📦 Metaobject response data:", {
         hasData: !!data.data,
         hasMetaobject: !!data.data?.metaobjectByHandle,
         hasErrors: !!(data.errors && data.errors.length > 0),
       });
 
       if (data.errors && data.errors.length > 0) {
-        log("❌ GraphQL errors:", data.errors);
+        shopifyServiceLog("❌ GraphQL errors:", data.errors);
         throw new Error(
           `GraphQL Error: ${data.errors.map((e) => e.message).join(", ")}`
         );
@@ -317,7 +315,7 @@ class ShopifyService {
 
       return data;
     } catch (error) {
-      log("❌ Error in Metaobject GraphQL request:", error);
+      shopifyServiceLog("❌ Error in Metaobject GraphQL request:", error);
       throw error;
     }
   }
@@ -329,10 +327,10 @@ class ShopifyService {
     orderNumber: string
   ): Promise<ProcessedOrderData | null> {
     try {
-      log("🔍 Checking if order is already processed:", orderNumber);
+      shopifyServiceLog("🔍 Checking if order is already processed:", orderNumber);
       
       const handle = orderNumber.replace("#", "");
-      log("📝 Using handle:", handle);
+      shopifyServiceLog("📝 Using handle:", handle);
 
       const query = `
         query {
@@ -348,20 +346,20 @@ class ShopifyService {
       `;
 
       const response = await this.makeMetaobjectGraphQLRequest(query);
-      log("📥 GraphQL response:", JSON.stringify(response, null, 2));
+      shopifyServiceLog("📥 GraphQL response:", JSON.stringify(response, null, 2));
 
       const metaobject = response.data.metaobjectByHandle;
       if (metaobject) {
-        log("✅ Order already processed");
+        shopifyServiceLog("✅ Order already processed");
         const formattedData = this.formatProcessedOrderForApp(response);
-        log("📋 Formatted data:", formattedData);
+        shopifyServiceLog("📋 Formatted data:", formattedData);
         return formattedData;
       } else {
-        log("❌ Order not yet processed");
+        shopifyServiceLog("❌ Order not yet processed");
         return null;
       }
     } catch (error) {
-      log("❌ Error checking if order processed:", error);
+      shopifyServiceLog("❌ Error checking if order processed:", error);
       
       return null;
     }
@@ -372,7 +370,7 @@ class ShopifyService {
    */
   async findOrderByNumber(orderNumber: string, confirmationCode: string): Promise<OrderData | null> {
     try {
-      log("🔍 Searching for order:", orderNumber, "with confirmation code:", confirmationCode);
+      shopifyServiceLog("🔍 Searching for order:", orderNumber, "with confirmation code:", confirmationCode);
 
       const query = `
         query {
@@ -413,19 +411,19 @@ class ShopifyService {
       const response = await this.makeGraphQLRequest(query);
 
       if (response.data.orders.edges.length === 0) {
-        log("❌ Order not found:", orderNumber);
+        shopifyServiceLog("❌ Order not found:", orderNumber);
         return null; 
       }
 
       const shopifyOrder = response.data.orders.edges[0].node;
-      log("✅ Order found:", {
+      shopifyServiceLog("✅ Order found:", {
         id: shopifyOrder.id,
         name: shopifyOrder.name,
       });
 
       return this.formatOrderForApp(shopifyOrder);
     } catch (error) {
-      log("❌ Error finding order:", error);
+      shopifyServiceLog("❌ Error finding order:", error);
       console.error("Error buscando orden:", error);
       throw error;
     }
@@ -492,10 +490,10 @@ class ShopifyService {
     ProcessedOrder: MetaobjectByHandleResponse
   ): ProcessedOrderData {
     const fields = ProcessedOrder.data.metaobjectByHandle!.fields;
-    log("📋 Metaobject fields:", fields);
+    shopifyServiceLog("📋 Metaobject fields:", fields);
 
     const fieldMap = Object.fromEntries(fields.map((f) => [f.key, f.value]));
-    log("🗺️ Field map:", fieldMap);
+    shopifyServiceLog("🗺️ Field map:", fieldMap);
 
     const result = {
       orderNumber: fieldMap["order_number"] || fieldMap["orderNumber"],
@@ -503,7 +501,7 @@ class ShopifyService {
       emailAddress: fieldMap["target_email"] || fieldMap["emailAddress"] || fieldMap["email"],
     };
 
-    log("📄 Formatted processed order:", result);
+    shopifyServiceLog("📄 Formatted processed order:", result);
     return result;
   }
 
@@ -622,7 +620,7 @@ class ShopifyService {
     };
 
     try {
-      log("📦 Creating processed order metaobject:", {
+      shopifyServiceLog("📦 Creating processed order metaobject:", {
         orderNumber: data.orderNumber,
         targetEmail: data.targetEmail,
         processedDate: data.processedDate,
@@ -634,7 +632,7 @@ class ShopifyService {
 
       if (response.data?.metaobjectCreate?.userErrors?.length > 0) {
         const errors = response.data.metaobjectCreate.userErrors;
-        log("❌ GraphQL errors creating metaobject:", errors);
+        shopifyServiceLog("❌ GraphQL errors creating metaobject:", errors);
         return {
           success: false,
           error: errors.map((e: { message: string }) => e.message).join(', ')
@@ -643,14 +641,14 @@ class ShopifyService {
 
       if (response.data?.metaobjectCreate?.metaobject?.id) {
         const metaobjectId = response.data.metaobjectCreate.metaobject.id;
-        log("✅ Processed order metaobject created successfully:", metaobjectId);
+        shopifyServiceLog("✅ Processed order metaobject created successfully:", metaobjectId);
         
         return {
           success: true,
           metaobjectId
         };
       } else {
-        log("❌ No metaobject ID returned from creation");
+        shopifyServiceLog("❌ No metaobject ID returned from creation");
         return {
           success: false,
           error: "No se pudo crear el metaobject"
@@ -658,7 +656,7 @@ class ShopifyService {
       }
 
     } catch (error) {
-      log("❌ Error creating processed order metaobject:", error);
+      shopifyServiceLog("❌ Error creating processed order metaobject:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Error desconocido"

@@ -31,7 +31,6 @@ export function validateForm<T extends Record<string, string | string[]>>(
     const config = fieldConfigs[fieldId as keyof T];
     
     if (!config) {
-      console.warn(`⚠️ No hay configuración para el campo: ${fieldId}`);
       return;
     }
 

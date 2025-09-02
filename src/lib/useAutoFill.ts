@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { isAutoFillEnabled, getMockDataForFormType, mockFooterData } from './mockData';
 import { TutelaDataType, PeticionDataType, TransitoDataType } from './useFormManager';
+import { frontendLogger } from "./utils.ts";
 
 interface UseAutoFillProps {
   effectiveFormType: 'tutela' | 'peticion' | 'transito' | null;
@@ -9,6 +10,10 @@ interface UseAutoFillProps {
   updateTransitoField?: (fieldId: keyof TransitoDataType, value: string | string[]) => void;
   setDeliveryEmail?: (email: string) => void;
   orderLookupCompleted: boolean; // Nuevo parámetro para saber cuándo se completó la búsqueda
+}
+
+const autoFillLog = (...args: unknown[]) => {
+  frontendLogger('AUTO FILL HOOK', ...args);
 }
 
 /**
@@ -37,7 +42,7 @@ export function useAutoFill({
       return;
     }
 
-    console.log(`🔥 Auto-llenando formulario de ${effectiveFormType} con datos de prueba...`);
+    autoFillLog(`🔥 Auto-llenando formulario de ${effectiveFormType} con datos de prueba...`);
 
     // Auto-llenar según el tipo de formulario
     if (effectiveFormType === 'tutela' && updateTutelaField) {
@@ -62,7 +67,7 @@ export function useAutoFill({
       setDeliveryEmail(mockFooterData.deliveryEmail);
     }
 
-    console.log(`✅ Formulario de ${effectiveFormType} auto-llenado exitosamente`);
+    autoFillLog(`✅ Formulario de ${effectiveFormType} auto-llenado exitosamente`);
 
   }, [
     effectiveFormType, 

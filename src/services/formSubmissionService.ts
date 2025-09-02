@@ -2,6 +2,11 @@ import { FormDataUnion } from '../lib/useFormManager';
 import { FormType } from '../lib/formValidator';
 import { OrderData } from '../types';
 import { SelectedPromptFileData } from '../lib/useFormFieldWithPromptFiles';
+import { frontendLogger } from '@/lib/utils';
+
+const formSubmitLog = (...args: unknown[]) => {
+  frontendLogger('FORM SUBMISSION SERVICE', ...args);
+}
 
 export interface SubmitFormRequest {
   formType: FormType;
@@ -26,10 +31,10 @@ class FormSubmissionService {
   private webhookUrl: string;
 
   constructor() {
-    this.webhookUrl = import.meta.env.MAKE_WEBHOOK || import.meta.env.VITE_MAKE_WEBHOOK;
+    this.webhookUrl = import.meta.env.VITE_MAKE_WEBHOOK || '';
     
     if (!this.webhookUrl) {
-      console.warn('⚠️ MAKE_WEBHOOK no está configurado en las variables de entorno');
+      console.warn('⚠️ VITE_MAKE_WEBHOOK no está configurado en las variables de entorno');
     }
   }
 
@@ -39,24 +44,62 @@ class FormSubmissionService {
   async submitForm(request: SubmitFormRequest): Promise<SubmitFormResponse> {
     try {
       if (!this.webhookUrl) {
-        throw new Error('Webhook URL no configurado. Verifica la variable MAKE_WEBHOOK en .env');
+        throw new Error('Webhook URL no configurado. Verifica la variable VITE_MAKE_WEBHOOK en .env');
       }
 
-      console.log('🚀 Enviando formulario al webhook:', {
+      // Validar estructura básica del formulario
+      const structureValidation = this.validateFormStructure(request);
+      if (!structureValidation.isValid) {
+        throw new Error(`Validación de estructura falló: ${structureValidation.errors.join(', ')}`);
+      }
+
+      // Validar payload completo antes del envío
+      const payloadValidation = this.validatePayloadCompleteness(request);
+      if (!payloadValidation.isValid) {
+        throw new Error(`Validación de payload falló: ${payloadValidation.errors.join(', ')}`);
+      }
+
+      formSubmitLog('🚀 Enviando formulario al webhook:', {
         type: request.formType,
         orderNumber: request.orderData.orderNumber,
         fieldsCount: Object.keys(request.formData).length,
+        hasPromptContent: !!(request.promptContent && Object.keys(request.promptContent).length > 0),
         webhookUrl: this.webhookUrl
       });
+
+      // Preparar contenido de prompt files de manera más robusta
+      let promptContentForPayload = {};
+      if (request.promptContent && Object.keys(request.promptContent).length > 0) {
+        // Construir un objeto con todos los prompt files disponibles
+        promptContentForPayload = Object.fromEntries(
+          Object.entries(request.promptContent).map(([key, promptData]) => [
+            key,
+            {
+              handle: promptData.handle,
+              name: promptData.name,
+              content: promptData.content
+            }
+          ])
+        );
+      }
 
       const payload = {
         formType: request.formType,
         formData: request.formData,
         orderData: request.orderData,
-        promptContent: request.promptContent!.procedureType.content || {},
-        deliveryEmail: request.deliveryEmail,
-        shopName: request.shopName,
+        promptContent: promptContentForPayload,
+        deliveryEmail: request.deliveryEmail.trim(),
+        shopName: request.shopName.trim(),
       };
+
+      // Log del payload final para debugging
+      formSubmitLog('📦 Payload final para webhook:', {
+        formType: payload.formType,
+        dataFieldsCount: Object.keys(payload.formData).length,
+        promptContentKeys: Object.keys(payload.promptContent),
+        hasDeliveryEmail: !!payload.deliveryEmail,
+        orderNumber: payload.orderData.orderNumber
+      });
 
       const response = await fetch(this.webhookUrl, {
         method: "POST",
@@ -72,7 +115,7 @@ class FormSubmissionService {
 
       // Make.com webhooks pueden devolver diferentes formatos de respuesta
       let result: SubmitFormResponse;
-      const webhookStatus: number = response.status;
+      let webhookStatus: number | null = null;
       
       try {
         // Verificar si el response tiene contenido y si el body no ha sido usado
@@ -82,13 +125,19 @@ class FormSubmissionService {
           console.warn('⚠️ Response body ya fue consumido, usando respuesta por defecto');
           result = {
             success: true,
-            message: 'Formulario enviado exitosamente (body already used)',
+            message: 'Formulario enviado exitosamente al webhook (body already used)',
             documentId: `WEBHOOK-${Date.now()}`
           };
         } else if (contentType && contentType.includes('application/json')) {
           // Solo intentar parsear JSON si el content-type lo indica
           const responseData = await response.json();
-
+          
+          // Capturar el status del webhook si existe
+          if (responseData.status && typeof responseData.status === 'number') {
+            webhookStatus = responseData.status;
+            formSubmitLog('📊 Status del webhook:', webhookStatus);
+          }
+          
           // Si el webhook devuelve un formato conocido, lo usamos
           if (responseData.success !== undefined) {
             result = responseData as SubmitFormResponse;
@@ -96,10 +145,8 @@ class FormSubmissionService {
             // Si no, creamos una respuesta exitosa basada en el status HTTP
             result = {
               success: true,
-              message: `Formulario enviado exitosamente. Respuesta: ${JSON.stringify(
-                responseData
-              )}`,
-              documentId: responseData.documentId || `WEBHOOK-${Date.now()}`,
+              message: `Formulario enviado exitosamente al webhook. Respuesta: ${JSON.stringify(responseData)}`,
+              documentId: responseData.documentId || `WEBHOOK-${Date.now()}`
             };
           }
         } else {
@@ -107,7 +154,7 @@ class FormSubmissionService {
           const responseText = await response.text();
           result = {
             success: true,
-            message: `Formulario enviado exitosamente. Respuesta: ${responseText || 'Sin contenido'}`,
+            message: `Formulario enviado exitosamente al webhook. Respuesta: ${responseText || 'Sin contenido'}`,
             documentId: `WEBHOOK-${Date.now()}`
           };
         }
@@ -116,17 +163,16 @@ class FormSubmissionService {
         // Si no podemos parsear la respuesta, pero el status es OK
         result = {
           success: true,
-          message: 'Formulario enviado exitosamente (error parsing response)',
+          message: 'Formulario enviado exitosamente al webhook (error parsing response)',
           documentId: `WEBHOOK-${Date.now()}`
         };
       }
 
       // Si el status es 200 y NO es un caso de bypass, proceder con el archivado de la orden
       const isBypassMode = request.orderData.id === 'bypass-mode';
-      debugger
       
       if (webhookStatus === 200 && !isBypassMode) {
-        console.log('✅ Status 200 recibido y no es bypass, procediendo con archivado de orden...');
+        formSubmitLog('✅ Status 200 recibido y no es bypass, procediendo con archivado de orden...');
         
         try {
           // Importar dinámicamente apiService para evitar dependencias circulares
@@ -138,7 +184,7 @@ class FormSubmissionService {
           );
           
           if (archiveResult.success) {
-            console.log('✅ Orden archivada exitosamente');
+            formSubmitLog('✅ Orden archivada exitosamente');
             result.message += ' - Orden archivada correctamente.';
           } else {
             console.warn('⚠️ Error archivando orden:', archiveResult.message);
@@ -149,12 +195,12 @@ class FormSubmissionService {
           result.message += ' - Error al archivar la orden.';
         }
       } else if (isBypassMode) {
-        console.log('🔓 Modo bypass detectado, saltando archivado de orden');
+        formSubmitLog('🔓 Modo bypass detectado, saltando archivado de orden');
       } else {
-        console.log('ℹ️ Status diferente a 200, saltando archivado de orden');
+        formSubmitLog('ℹ️ Status diferente a 200, saltando archivado de orden');
       }
 
-      console.log('✅ Formulario enviado exitosamente:', result);
+      formSubmitLog('✅ Formulario enviado exitosamente:', result);
       return result;
 
     } catch (error) {
@@ -164,7 +210,7 @@ class FormSubmissionService {
         success: false,
         message: error instanceof Error 
           ? `Error al enviar formulario: ${error.message}`
-          : 'Error desconocido al enviar formulario'
+          : 'Error desconocido al enviar formulario al webhook'
       };
     }
   }
@@ -181,6 +227,57 @@ class FormSubmissionService {
    */
   getWebhookUrl(): string {
     return this.webhookUrl;
+  }
+
+  /**
+   * Valida la completitud del payload antes del envío al webhook
+   */
+  validatePayloadCompleteness(request: SubmitFormRequest): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Validar email de entrega
+    if (!request.deliveryEmail || request.deliveryEmail.trim() === '') {
+      errors.push('Email de entrega requerido');
+    }
+
+    // Validar nombre de la tienda
+    if (!request.shopName || request.shopName.trim() === '') {
+      errors.push('Nombre de la tienda requerido');
+    }
+
+    // Validaciones específicas por tipo de formulario
+    if (request.formType === 'transito') {
+      // Para tránsito, es crítico tener prompt content para el tipo de procedimiento
+      if (!request.promptContent || Object.keys(request.promptContent).length === 0) {
+        errors.push('Contenido de prompt files requerido para formularios de tránsito');
+      } else {
+        // Verificar que al menos tenga procedureType con contenido válido
+        const procedureType = request.promptContent.procedureType;
+        if (!procedureType || !procedureType.content || procedureType.content.trim() === '') {
+          errors.push('Contenido del tipo de procedimiento requerido para tránsito');
+        }
+      }
+    }
+
+    // Para otros tipos de formulario, los prompt files son opcionales pero si existen deben ser válidos
+    if (request.promptContent && Object.keys(request.promptContent).length > 0) {
+      Object.entries(request.promptContent).forEach(([key, promptData]) => {
+        if (!promptData.content || promptData.content.trim() === '') {
+          errors.push(`Contenido del prompt file '${key}' está vacío`);
+        }
+        if (!promptData.handle || promptData.handle.trim() === '') {
+          errors.push(`Handle del prompt file '${key}' está vacío`);
+        }
+        if (!promptData.name || promptData.name.trim() === '') {
+          errors.push(`Nombre del prompt file '${key}' está vacío`);
+        }
+      });
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
   }
 
   /**
@@ -227,6 +324,26 @@ class FormSubmissionService {
       });
     }
 
+    if (request.formType === 'transito') {
+      const transitoData = request.formData as Record<string, string>;
+      const requiredFields = ['typeId', 'idNumber']; // Campos base requeridos para tránsito
+      
+      requiredFields.forEach(field => {
+        if (!transitoData[field] || transitoData[field].trim() === '') {
+          errors.push(`Campo requerido: ${field}`);
+        }
+      });
+
+      // Validar que al menos tenga algunos campos dinámicos completados
+      const dynamicFields = Object.keys(transitoData).filter(key => 
+        !['typeId', 'idNumber'].includes(key) && transitoData[key] && transitoData[key].trim() !== ''
+      );
+      
+      if (dynamicFields.length === 0) {
+        errors.push('Al menos un campo específico del formulario de tránsito debe estar completado');
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors
@@ -237,10 +354,10 @@ class FormSubmissionService {
    * Simula el envío del formulario (para testing)
    */
   async simulateSubmission(request: SubmitFormRequest): Promise<SubmitFormResponse> {
-    console.log('🧪 Simulando envío de formulario...');
-    console.log('📧 Email de entrega:', request.deliveryEmail);
-    console.log('📋 Tipo de formulario:', request.formType);
-    console.log('📄 Datos de prompt files:', Object.keys(request.promptContent || {}));
+    formSubmitLog('🧪 Simulando envío de formulario...');
+    formSubmitLog('📧 Email de entrega:', request.deliveryEmail);
+    formSubmitLog('📋 Tipo de formulario:', request.formType);
+    formSubmitLog('📄 Datos de prompt files:', Object.keys(request.promptContent || {}));
     
     // Simular delay de red
     await new Promise(resolve => setTimeout(resolve, 2000));

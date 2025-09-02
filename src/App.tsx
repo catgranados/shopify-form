@@ -24,9 +24,13 @@ import { useFooterValidation } from './lib/useFooterValidation';
 import { useAutoFill } from './lib/useAutoFill';
 import { useTransitoFormCompleteness } from './lib/useTransitoFormCompleteness';
 import { usePeticionFormCompleteness } from './lib/usePeticionFormCompleteness';
-
+import { frontendLogger } from './lib/utils.ts';
 
 initializeFieldValidations();
+
+const appLog = (...args: unknown[]) => {
+  frontendLogger('APP', ...args);
+}
 
 function App () {
   const [orderNumberField, setOrderNumberField] = useState('');
@@ -297,7 +301,7 @@ function App () {
   };
 
   const handleFormSubmit = async () => {
-    console.log('🚀 Iniciando envío de formulario...');
+    appLog('🚀 Iniciando envío de formulario...');
 
     const effectiveFormType = getEffectiveFormType();
 
@@ -396,7 +400,7 @@ function App () {
 
       // Log para debugging
       if (Object.keys(promptFilesData).length > 0) {
-        console.log('📎 Prompt files adjuntos:', promptFilesData);
+        appLog('📎 Prompt files adjuntos:', promptFilesData);
       }
         
       // Validar que se haya proporcionado un email de entrega (ya validado en footerValidation)
@@ -414,7 +418,7 @@ function App () {
       if (result.success) {
         toast.success(result.message);
         if (result.documentUrl) {
-          console.log('📄 Documento generado:', result.documentUrl);
+          appLog('📄 Documento generado:', result.documentUrl);
         }
       } else {
         toast.error(result.message);
@@ -758,12 +762,12 @@ function App () {
         setPromptFiles(response.promptFiles);
       } else {
         console.error('❌ Error al cargar prompt files:', response.message);
-        toast.error(`Error al cargar archivos: ${response.message}`);
+        toast.error(`Error al cargar configuración para el tipo ${formType}: ${response.message}. Comuníquese con nuestra tienda si el problema persiste`);
         setPromptFiles({});
       }
     } catch (error) {
       console.error('❌ Error inesperado al cargar prompt files:', error);
-      toast.error('Error inesperado al cargar archivos de plantilla');
+      toast.error(`Error inesperado al cargar configuración para el tipo ${formType}. Comuníquese con nuestra tienda si el problema persiste.`);
       setPromptFiles({});
     } 
   };
@@ -835,7 +839,7 @@ function App () {
     const financialStatus = status.split(' - ')[0];
     
     // Log para debugging
-    console.log('🔍 Estado del pedido:', {
+    appLog('🔍 Estado del pedido:', {
       fullStatus: order.status,
       financialStatus: financialStatus,
       isPaid: financialStatus === 'pagado'

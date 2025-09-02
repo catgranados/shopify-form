@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import ShopifyService from './shopifyService.js';
 import { OrderData } from '../src/types/index';
+import { backendLogger } from "../src/lib/utils.ts";
 
 interface ApiResponse {
   success: boolean;
@@ -8,29 +9,28 @@ interface ApiResponse {
   message?: string;
 }
 
-const log = (...args: unknown[]) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [ORDERS API]`, ...args);
+const ordersLog = (...args: unknown[]) => {
+  backendLogger('ORDERS API', ...args);
 };
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  log('🚀 Request received:', { method: req.method, url: req.url });
+  ordersLog('🚀 Request received:', { method: req.method, url: req.url });
   
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
 
   if (req.method === 'OPTIONS') {
-    log('✅ OPTIONS request handled');
+    ordersLog('✅ OPTIONS request handled');
     res.status(200).end();
     return;
   }
 
   if (req.method !== 'POST') {
-    log('❌ Method not allowed:', req.method);
+    ordersLog('❌ Method not allowed:', req.method);
     res.status(405).json({ 
       success: false, 
       message: 'Método no permitido. Solo se permite POST.' 
@@ -39,7 +39,7 @@ export default async function handler(
   }
 
   try {
-    log('📝 Request body:', req.body);
+    ordersLog('📝 Request body:', req.body);
     const { orderNumber, confirmationCode } = req.body;
 
     if (!orderNumber) {
@@ -59,7 +59,7 @@ export default async function handler(
     }
 
     if (!/^\d+$/.test(orderNumber.toString())) {
-      log('❌ Invalid order number format:', orderNumber);
+      ordersLog('❌ Invalid order number format:', orderNumber);
       res.status(400).json({
         success: false,
         message: 'El número de pedido debe contener solo números'
@@ -67,12 +67,12 @@ export default async function handler(
       return;
     }
 
-    log('🔍 Looking up order:', orderNumber, 'with confirmation code:', confirmationCode);
+    ordersLog('🔍 Looking up order:', orderNumber, 'with confirmation code:', confirmationCode);
 
     const cheatCode = process.env.FORM_CHEATCODE;
     
     if (cheatCode && (orderNumber.toString() === cheatCode || confirmationCode === cheatCode)) {
-      log('🎯 Cheat code detected in one of the fields, returning mock data');
+      ordersLog('🎯 Cheat code detected in one of the fields, returning mock data');
       const mockOrderData: OrderData = {
         id: 'bypass-order-id',
         orderNumber: orderNumber.toString(),
@@ -98,11 +98,11 @@ export default async function handler(
     
     try {
       const shopifyService = new ShopifyService();
-      log('🛍️ Shopify service initialized, searching for order...');
+      ordersLog('🛍️ Shopify service initialized, searching for order...');
       orderData = await lookupOrderFromShopify(shopifyService, orderNumber, confirmationCode);
-      log('📦 Shopify lookup result:', orderData ? 'Found' : 'Not found');
+      ordersLog('📦 Shopify lookup result:', orderData ? 'Found' : 'Not found');
     } catch (shopifyError) {
-      log('❌ Shopify error:', shopifyError);
+      ordersLog('❌ Shopify error:', shopifyError);
     }
 
     if (orderData) {

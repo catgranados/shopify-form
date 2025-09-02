@@ -3,30 +3,30 @@ import ShopifyService from './shopifyService.js';
 import {
   OrderValidationResponse
 } from "../src/types/index";
+import { backendLogger } from "../src/lib/utils.ts";
 
-const log = (...args: unknown[]) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [VALIDATION API]`, ...args);
+const validationLog = (...args: unknown[]) => {
+  backendLogger('VALIDATION API', ...args);
 };
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  log('🚀 Validation request received:', { method: req.method, url: req.url });
+  validationLog('🚀 Validation request received:', { method: req.method, url: req.url });
   
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
 
   if (req.method === 'OPTIONS') {
-    log('✅ OPTIONS request handled');
+    validationLog('✅ OPTIONS request handled');
     res.status(200).end();
     return;
   }
 
   if (req.method !== 'POST') {
-    log('❌ Method not allowed:', req.method);
+    validationLog('❌ Method not allowed:', req.method);
     res.status(405).json({ 
       success: false, 
       isProcessed: null,
@@ -36,7 +36,7 @@ export default async function handler(
   }
 
   try {
-    log('📝 Request body:', req.body);
+    validationLog('📝 Request body:', req.body);
     const { orderNumber, confirmationCode } = req.body;
 
     if (!orderNumber) {
@@ -58,7 +58,7 @@ export default async function handler(
     }
 
     if (!/^\d+$/.test(orderNumber.toString())) {
-      log('❌ Invalid order number format:', orderNumber);
+      validationLog('❌ Invalid order number format:', orderNumber);
       res.status(400).json({
         success: false,
         isProcessed: null,
@@ -67,12 +67,12 @@ export default async function handler(
       return;
     }
 
-    log('🔍 Validating order:', orderNumber);
+    validationLog('🔍 Validating order:', orderNumber);
 
     const cheatCode = process.env.FORM_CHEATCODE;
     
     if (cheatCode && (orderNumber.toString() === cheatCode || confirmationCode === cheatCode)) {
-      log('🎯 Cheat code detected in one of the fields, allowing bypass');
+      validationLog('🎯 Cheat code detected in one of the fields, allowing bypass');
       const response: OrderValidationResponse = {
         success: true,
         isProcessed: null,
@@ -85,10 +85,10 @@ export default async function handler(
 
     try {
       const shopifyService = new ShopifyService();
-      log('🛍️ Shopify service initialized, checking if order processed...');
+      validationLog('🛍️ Shopify service initialized, checking if order processed...');
       
       const isProcessed = await shopifyService.checkIfOrderProcessed(orderNumber);
-      log('📦 Order processed data result:', isProcessed);
+      validationLog('📦 Order processed data result:', isProcessed);
 
       const response: OrderValidationResponse = {
         success: true,
@@ -101,7 +101,7 @@ export default async function handler(
       res.status(200).json(response);
 
     } catch (shopifyError) {
-      log('❌ Shopify validation error:', shopifyError);
+      validationLog('❌ Shopify validation error:', shopifyError);
       
       const response: OrderValidationResponse = {
         success: true,

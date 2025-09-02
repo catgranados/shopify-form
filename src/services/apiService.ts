@@ -1,4 +1,10 @@
 import { OrderData, OrderValidationResponse, PromptFilesWithContentResponse } from "@/types/index";
+import { frontendLogger } from '@/lib/utils';
+
+const apiLog = (...args: unknown[]) => {
+  frontendLogger('API SERVICE', ...args);
+}
+
 export interface ApiResponse {
   success: boolean;
   data?: OrderData;
@@ -11,7 +17,7 @@ class ApiService {
   constructor() {
     this.baseUrl = import.meta.env.VITE_API_BASE_URL || window.location.origin;
     
-    console.log('API Service initialized:', {
+    apiLog('API Service initialized:', {
       baseUrl: this.baseUrl,
       environment: import.meta.env.MODE
     });
@@ -174,7 +180,7 @@ class ApiService {
    */
   async getPromptFilesWithContent(useCase: string): Promise<PromptFilesWithContentResponse> {
     try {
-      console.log(`🔍 [ApiService] Obteniendo prompt files para caso de uso: ${useCase}`);
+      apiLog(`🔍 [ApiService] Obteniendo prompt files para caso de uso: ${useCase}`);
       
       const response = await fetch(`${this.baseUrl}/api/promptFiles?useCase=${encodeURIComponent(useCase)}&withContent=true`, {
         method: 'GET',
@@ -190,7 +196,7 @@ class ApiService {
 
       const data = await response.json();
       
-      console.log(`✅ [ApiService] Prompt files obtenidos:`, {
+      apiLog(`✅ [ApiService] Prompt files obtenidos:`, {
         success: data.success,
         count: Object.keys(data.promptFiles || {}).length,
         useCase
@@ -219,7 +225,7 @@ class ApiService {
    */
   async archiveProcessedOrder(orderNumber: string, targetEmail: string): Promise<{ success: boolean; message?: string }> {
     try {
-      console.log(`📦 [ApiService] Archivando orden procesada: ${orderNumber}`);
+      apiLog(`📦 [ApiService] Archivando orden procesada: ${orderNumber}`);
       
       const response = await fetch(`${this.baseUrl}/api/archive`, {
         method: 'POST',
@@ -240,7 +246,7 @@ class ApiService {
 
       const data = await response.json();
       
-      console.log(`✅ [ApiService] Orden archivada exitosamente:`, {
+      apiLog(`✅ [ApiService] Orden archivada exitosamente:`, {
         success: data.success,
         orderNumber
       });

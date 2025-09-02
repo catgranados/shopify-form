@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import ShopifyService from './shopifyService.js';
+import { backendLogger } from '../src/lib/utils.ts';
 
 interface ArchiveRequest {
   orderNumber: string;
@@ -13,29 +14,28 @@ interface ArchiveResponse {
   metaobjectId?: string;
 }
 
-const log = (...args: unknown[]) => {
-  const timestamp = new Date().toISOString();
-  console.log(`[${timestamp}] [ARCHIVE API]`, ...args);
+const archiveLog = (...args: unknown[]) => {
+  backendLogger('ARCHIVE API', ...args);
 };
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  log('🚀 Archive request received:', { method: req.method, url: req.url });
+  archiveLog('🚀 Archive request received:', { method: req.method, url: req.url });
   
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
 
   if (req.method === 'OPTIONS') {
-    log('✅ OPTIONS request handled');
+    archiveLog('✅ OPTIONS request handled');
     res.status(200).end();
     return;
   }
 
   if (req.method !== 'POST') {
-    log('❌ Method not allowed:', req.method);
+    archiveLog('❌ Method not allowed:', req.method);
     res.status(405).json({ 
       success: false, 
       message: 'Método no permitido. Solo se permite POST.' 
@@ -44,7 +44,7 @@ export default async function handler(
   }
 
   try {
-    log('📝 Archive request body:', req.body);
+    archiveLog('📝 Archive request body:', req.body);
     const { orderNumber, targetEmail, processedDate }: ArchiveRequest = req.body;
 
     // Validaciones
@@ -72,7 +72,7 @@ export default async function handler(
       return;
     }
 
-    log('📦 Archiving processed order:', {
+    archiveLog('📦 Archiving processed order:', {
       orderNumber,
       targetEmail,
       processedDate
@@ -80,7 +80,7 @@ export default async function handler(
 
     try {
       const shopifyService = new ShopifyService();
-      log('🛍️ Shopify service initialized for archiving...');
+      archiveLog('🛍️ Shopify service initialized for archiving...');
       
       // Crear metaobject para orden procesada
       const metaobjectResult = await shopifyService.createProcessedOrderMetaobject({
@@ -90,7 +90,7 @@ export default async function handler(
       });
 
       if (metaobjectResult.success) {
-        log('✅ Order archived successfully:', metaobjectResult.metaobjectId);
+        archiveLog('✅ Order archived successfully:', metaobjectResult.metaobjectId);
         
         const response: ArchiveResponse = {
           success: true,
@@ -100,7 +100,7 @@ export default async function handler(
         
         res.status(200).json(response);
       } else {
-        log('❌ Failed to archive order:', metaobjectResult.error);
+        archiveLog('❌ Failed to archive order:', metaobjectResult.error);
         
         const response: ArchiveResponse = {
           success: false,
@@ -111,7 +111,7 @@ export default async function handler(
       }
 
     } catch (shopifyError) {
-      log('❌ Shopify archive error:', shopifyError);
+      archiveLog('❌ Shopify archive error:', shopifyError);
       
       const response: ArchiveResponse = {
         success: false,
