@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { PromptFilesGraphQLResponse, PromptFilesServiceResponse, PromptFile, PromptFilesWithContentResponse, PromptFileWithContent } from '../src/types';
-import ShopifyService from './shopifyService.ts';
+import ShopifyService from './shopifyService.js';
 
 // Instancia del servicio de Shopify
 const shopifyService = new ShopifyService();

@@ -39,14 +39,6 @@
       "dest": "/api/archive.ts"
     },
     {
-      "src": "/api/test",
-      "dest": "/api/test.ts"
-    },
-    {
-      "src": "/api/hello",
-      "dest": "/api/hello.js"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "/api/$1"
     },
