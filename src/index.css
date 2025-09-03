@@ -54,7 +54,6 @@
 
 body {
   margin: 0;
-  display: flex;
 }
 
 h1 {
@@ -149,5 +148,12 @@ h1 {
 
   .scrollbar-balanced {
     scrollbar-gutter: stable both-edges;
+  }
+
+  .murecho-normal {
+    font-family: "Murecho", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 400;
+    font-style: normal;
   }
 }

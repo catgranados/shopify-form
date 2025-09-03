@@ -1,23 +1,23 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react';
 import { Alert, AlertDescription, AlertTitle } from './components/ui/alert';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/ui/card';
 import { Button } from './components/ui/button';
-import FormTexts from './constants/texts'
-import FormActionInput from './components/formActionInput'
+import FormTexts from './constants/texts';
+import FormActionInput from './components/formActionInput';
 import FormTextarea from './components/formTextarea';
 import FormMultiInput, { MultiInputOption } from './components/formMultiInput';
 import FormSelect from './components/formSelect';
 import FormSelectWithPromptFiles from './components/formSelectWithPromptFiles';
 import { preparePromptFilesForSubmission } from './lib/useFormFieldWithPromptFiles';
-import { Info } from 'lucide-react';
-import { Toaster } from './components/ui/sonner'
-import { toast } from 'sonner'
-import { apiService } from './services/apiService'
-import { OrderData, ProcessedOrderData, PromptFileWithContent } from './types/index'
-import { initializeFieldValidations } from './lib/fieldValidationInitializer'
-import { useFormManager, TutelaDataType, PeticionDataType, TransitoDataType } from './lib/useFormManager'
-import { getFormType } from './lib/formValidator'
-import { formSubmissionService } from './services/formSubmissionService'
+import { Info, ChevronLeft } from 'lucide-react';
+import { Toaster } from './components/ui/sonner';
+import { toast } from 'sonner';
+import { apiService } from './services/apiService';
+import { OrderData, ProcessedOrderData, PromptFileWithContent } from './types/index';
+import { initializeFieldValidations } from './lib/fieldValidationInitializer';
+import { useFormManager, TutelaDataType, PeticionDataType, TransitoDataType } from './lib/useFormManager';
+import { getFormType } from './lib/formValidator';
+import { formSubmissionService } from './services/formSubmissionService';
 import { Separator } from './components/ui/separator';
 import { useTransitoConditionalRendering } from './lib/useConditionalRendering';
 import { useFooterValidation } from './lib/useFooterValidation';
@@ -25,6 +25,7 @@ import { useAutoFill } from './lib/useAutoFill';
 import { useTransitoFormCompleteness } from './lib/useTransitoFormCompleteness';
 import { usePeticionFormCompleteness } from './lib/usePeticionFormCompleteness';
 import { frontendLogger } from './lib/utils.ts';
+import SHOP_ROUTES from './constants/shopifyRoutes';
 
 initializeFieldValidations();
 
@@ -36,6 +37,7 @@ function App () {
   const [orderNumberField, setOrderNumberField] = useState('');
   const [confirmationCodeField, setConfirmationCodeField] = useState('');
   const [shopName, setShopName] = useState('CG Asesores'); // Estado para el nombre de la tienda
+  const [shopUrl, setShopUrl] = useState(''); // Estado para la URL de la tienda
   const [order, setOrder] = useState<OrderData>({
     id: '',
     orderNumber: '',
@@ -260,6 +262,12 @@ function App () {
       console.error('❌ Error cargando nombre de tienda:', error);
     });
 
+    // Cargar la URL de la tienda desde las variables de entorno
+    const shopDomain = import.meta.env.VITE_SHOPIFY_SHOP_DOMAIN;
+    if (shopDomain) {
+      setShopUrl(shopDomain);
+    }
+
     apiService.testConnection();
   }, []);
 
@@ -344,7 +352,7 @@ function App () {
 
     // Validar campos del footer
     const footerValidation = validateFooterFields();
-    
+
     // Combinar validaciones del formulario principal y del footer
     const combinedValidation = {
       isValid: validationResult.isValid && footerValidation.isValid,
@@ -402,7 +410,7 @@ function App () {
       if (Object.keys(promptFilesData).length > 0) {
         appLog('📎 Prompt files adjuntos:', promptFilesData);
       }
-        
+
       // Validar que se haya proporcionado un email de entrega (ya validado en footerValidation)
       // Esta validación redundante se elimina ya que footerValidation se encarga de esto
 
@@ -497,7 +505,6 @@ function App () {
           }]
         });
 
-        toast.info('Modo de desarrollo activado - Selecciona el tipo de formulario');
         setOrderLookupCompleted(true); // Marcamos como completado para bypass mode
         setIsLoading(false);
         return;
@@ -757,7 +764,7 @@ function App () {
   const loadPromptFilesForForm = async (formType: 'tutela' | 'peticion' | 'transito') => {
     try {
       const response = await apiService.getPromptFilesWithContent(formType);
-      
+
       if (response.success) {
         setPromptFiles(response.promptFiles);
       } else {
@@ -769,19 +776,19 @@ function App () {
       console.error('❌ Error inesperado al cargar prompt files:', error);
       toast.error(`Error inesperado al cargar configuración para el tipo ${formType}. Comuníquese con nuestra tienda si el problema persiste.`);
       setPromptFiles({});
-    } 
+    }
   };
 
   // Efecto para cargar prompt files cuando cambie el effectiveFormType
   useEffect(() => {
     const effectiveFormType = getEffectiveFormType();
-    
+
     if (effectiveFormType) {
       loadPromptFilesForForm(effectiveFormType);
     } else {
       setPromptFiles({});
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderValidation, bypassFormType, order.id, order.items]);
 
   // Función para resetear prompt files (cuando se hace una nueva consulta)
@@ -792,7 +799,7 @@ function App () {
   // Función para obtener el email del formulario actual
   const getCurrentFormEmail = (): string => {
     const effectiveFormType = getEffectiveFormType();
-    
+
     if (effectiveFormType === 'tutela') {
       return tutelaData.email;
     } else if (effectiveFormType === 'peticion') {
@@ -800,7 +807,7 @@ function App () {
     } else if (effectiveFormType === 'transito') {
       return transitoData.notificationEmail;
     }
-    
+
     return '';
   };
 
@@ -809,7 +816,7 @@ function App () {
     if (usePreviousEmail) {
       const effectiveFormType = getEffectiveFormType();
       let currentEmail = '';
-      
+
       if (effectiveFormType === 'tutela') {
         currentEmail = tutelaData.email;
       } else if (effectiveFormType === 'peticion') {
@@ -817,12 +824,12 @@ function App () {
       } else if (effectiveFormType === 'transito') {
         currentEmail = transitoData.notificationEmail;
       }
-      
+
       setDeliveryEmail(currentEmail);
     } else {
       setDeliveryEmail('');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usePreviousEmail, tutelaData.email, peticionData.responseEmail, transitoData.notificationEmail]);
 
   // Función para verificar si el pedido está pagado
@@ -830,23 +837,30 @@ function App () {
     if (!order.id || order.id === 'bypass-mode') {
       return true; // Para bypass mode, consideramos como pagado
     }
-    
+
     // El status viene en formato "Estado Financiero - Estado de Envío"
     // Necesitamos verificar que el estado financiero sea "Pagado"
     const status = order.status.toLowerCase();
-    
+
     // Extraer solo la parte del estado financiero (antes del guión)
     const financialStatus = status.split(' - ')[0];
-    
+
     // Log para debugging
     appLog('🔍 Estado del pedido:', {
       fullStatus: order.status,
       financialStatus: financialStatus,
       isPaid: financialStatus === 'pagado'
     });
-    
+
     // Verificar si el estado financiero indica que está pagado
     return financialStatus === 'pagado';
+  };
+
+  // Función para manejar la redirección a la tienda
+  const handleBackToShop = () => {
+    if (shopUrl) {
+      window.location.href = shopUrl;
+    }
   };
 
   const renderHeader = () => {
@@ -865,52 +879,52 @@ function App () {
                   <li dangerouslySetInnerHTML={{ __html: FormTexts.formDescription.processedDate(orderValidation.processedData.processedDate) }}></li>
                   <li dangerouslySetInnerHTML={{ __html: FormTexts.formDescription.emailAddress(orderValidation.processedData.emailAddress) }}></li>
                 </ul>
-                <div>{FormTexts.formDescription.disagreementSuggestion}{" "}<a href={FormTexts.formDescription.disagreementLinkText} target="_blank" className='text-red-800 underline' rel="noopener noreferrer">{FormTexts.formDescription.disagreementLinkText}</a></div>
+                <div>{FormTexts.formDescription.disagreementSuggestion}{" "}<a href={SHOP_ROUTES.contact} target="_blank" className='text-red-800 underline' rel="noopener noreferrer">{SHOP_ROUTES.contact}</a></div>
               </AlertDescription>
             )}
           </Alert>
         </CardDescription>
       )
-    } 
-    
+    }
+
     // Luego verificar si es modo bypass
     else if (orderValidation?.allowBypass) {
       return (
         <CardDescription className='flex flex-col gap-2'>
           <Alert variant="warning" className="mt-2">
             <Info />
-            <AlertTitle>Modo de desarrollo activado</AlertTitle>
+            <AlertTitle>{FormTexts.formDescription.bypassTitle}</AlertTitle>
             <AlertDescription>
-              Selecciona el tipo de formulario que deseas generar
+              {FormTexts.formDescription.bypassMessage}
             </AlertDescription>
           </Alert>
         </CardDescription>
       )
-    } 
-    
+    }
+
     // Verificar si tenemos una orden válida y luego verificar estado de pago
     else if (order.id && order.id !== 'bypass-mode') {
       const isPaid = isOrderPaid();
-      
+
       return (
         <CardDescription className='flex flex-col gap-2'>
           <div><strong>{FormTexts.formDescription.orderNumber}</strong>{" "}{order.orderNumber}</div>
           <div><strong>{FormTexts.formDescription.orderDate}</strong>{" "}{order.date}</div>
-          
+
           {!isPaid && (
             <Alert variant="destructive" className="mt-2">
               <Info />
               <AlertTitle>Pedido pendiente de pago</AlertTitle>
               <AlertDescription>
                 <div>{FormTexts.formDescription.unpaidOrderMsg}</div>
-                <div className="mt-2">{FormTexts.formDescription.unpaidOrderSuggestion}{" "}<a href={FormTexts.formDescription.disagreementLinkText} target="_blank" className='text-red-800 underline' rel="noopener noreferrer">{FormTexts.formDescription.disagreementLinkText}</a></div>
+                <div className="mt-2">{FormTexts.formDescription.unpaidOrderSuggestion}{" "}<a href={SHOP_ROUTES.contact} target="_blank" className='text-red-800 underline' rel="noopener noreferrer">{SHOP_ROUTES.contact}</a></div>
               </AlertDescription>
             </Alert>
           )}
         </CardDescription>
       )
-    } 
-    
+    }
+
     // Si no hay orden cargada
     else {
       return (
@@ -918,7 +932,10 @@ function App () {
           <Alert variant={"warning"}>
             <Info />
             <AlertTitle>
-              <span><div dangerouslySetInnerHTML={{ __html: FormTexts.formDescription.unloadedDataMsg }}></div></span>
+              <span>
+                <div dangerouslySetInnerHTML={{ __html: FormTexts.formDescription.unloadedDataMsg }}></div>
+                <a href={SHOP_ROUTES.guides} target="_blank" className='text-foreground underline' rel="noopener noreferrer">{SHOP_ROUTES.guides}</a>
+              </span>
             </AlertTitle>
           </Alert>
         </CardDescription>
@@ -988,193 +1005,210 @@ function App () {
 
   return (
     <>
-      <Toaster position="top-center" richColors  />
-      
+      <Toaster position="top-center" richColors />
+
       {/* Overlay de carga durante el envío */}
       {isSubmitting && (
         <div className="fixed inset-0 bg-foreground bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-background rounded-lg p-8 max-w-sm mx-4 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <h3 className="text-lg font-semibold mb-2">Procesando formulario...</h3>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-foreground mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold mb-2">{FormTexts.isSubmitting.title}</h3>
             <p className="text-gray-600 text-sm">
-              Por favor espera mientras procesamos tu solicitud
+              {FormTexts.isSubmitting.message}
             </p>
           </div>
         </div>
       )}
-      
-      <div className='fixed inset-0 bg-foreground flex items-center justify-center p-4'>
-        <Card className="container bg-background scrollbar-balanced max-h-full overflow-auto w-full max-w-xl">
-          <CardHeader className="space-y-2">
-            <CardTitle>
-              <h1 className="text-2xl font-bold text-center"
-                style={{ wordBreak: "break-word" }}
-              >{shopName}</h1>
-              <h2 className="text-2xl font-bold text-center"
-                style={{ wordBreak: "break-word" }}
-              >{FormTexts.subTitle(
-                orderValidation?.allowBypass && bypassFormType
-                  ? `Formulario de ${bypassFormType.charAt(0).toUpperCase() + bypassFormType.slice(1)}`
-                  : order.items[0].title
-              )}</h2>
-            </CardTitle>
-            {renderHeader()}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <FormActionInput
-              id={FormTexts.orderNumber.id}
-              label={FormTexts.orderNumber.label}
-              wrapperClassName={commonFormFieldsClassnames.wrapper}
-              inputProps={{
-                type: FormTexts.orderNumber.typeField,
-                placeholder: FormTexts.orderNumber.fieldPlaceholder,
-                value: orderNumberField,
-                onChange: (e) => setOrderNumberField(e.target.value),
-                disabled: isLoading,
-              }}
-              required={FormTexts.orderNumber.required}
-              validators={FormTexts.orderNumber.validators || []}
-              alertVariant="destructive"
+
+      <div className='min-h-[100dvh] flex flex-col murecho-normal'>
+        <header
+          className='flex bg-foreground justify-start px-4 h-9.5 gap-2'
+        >
+          {shopUrl && (
+            <ChevronLeft
+              className='h-full cursor-pointer text-background hover:text-gray-300 transition-colors self-center'
+              onClick={handleBackToShop}
             />
-            <FormActionInput
-              id={FormTexts.confirmationCode.id}
-              label={FormTexts.confirmationCode.label}
-              wrapperClassName={commonFormFieldsClassnames.wrapper}
-              inputProps={{
-                type: FormTexts.confirmationCode.typeField,
-                placeholder: FormTexts.confirmationCode.fieldPlaceholder,
-                value: confirmationCodeField,
-                onChange: (e) => setConfirmationCodeField(e.target.value),
-                disabled: isLoading,
-              }}
-              buttonProps={{
-                onClick: () => {
-                  handleOrderLookup();
-                },
-                variant: 'default',
-                disabled: isLoading || !orderNumberField.trim() || !confirmationCodeField.trim(),
-              }}
-              required={FormTexts.confirmationCode.required}
-              validators={FormTexts.confirmationCode.validators || []}
-              buttonText={FormTexts.orderNumber.buttonText!(isLoading)}
-              alertVariant="destructive"
-            />
-            {renderMainForm()}
-          </CardContent>
+          )}
+        </header>
+        <main className='flex-1 bg-background flex items-center justify-center p-4'>
+          <Card className='bg-foreground md:p-22 '>
+            <Card className="bg-background scrollbar-balanced max-h-full overflow-auto max-w-xl">
+              <CardHeader className="space-y-2">
+                <CardTitle>
+                  <div className='flex flex-col md:flex-row items-center gap-2 justify-center'>
+                    <img src={"favicon.svg"} alt="favicon" className='w-22' />
+                    <h1 className="text-2xl font-normal text-center"
+                    >{shopName}</h1>
+                  </div>
 
-          <CardFooter>
-            {(() => {
-              const effectiveFormType = getEffectiveFormType();
+                  <h2 className="text-2xl text-center"
+                    style={{ wordBreak: "break-word" }}
+                  >{FormTexts.subTitle(
+                    orderValidation?.allowBypass && bypassFormType
+                      ? `Formulario de ${bypassFormType.charAt(0).toUpperCase() + bypassFormType.slice(1)}`
+                      : order.items[0].title
+                  )}</h2>
+                </CardTitle>
+                {renderHeader()}
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormActionInput
+                  id={FormTexts.orderNumber.id}
+                  label={FormTexts.orderNumber.label}
+                  wrapperClassName={commonFormFieldsClassnames.wrapper}
+                  inputProps={{
+                    type: FormTexts.orderNumber.typeField,
+                    placeholder: FormTexts.orderNumber.fieldPlaceholder,
+                    value: orderNumberField,
+                    onChange: (e) => setOrderNumberField(e.target.value),
+                    disabled: isLoading,
+                  }}
+                  required={FormTexts.orderNumber.required}
+                  validators={FormTexts.orderNumber.validators || []}
+                  alertVariant="destructive"
+                />
+                <FormActionInput
+                  id={FormTexts.confirmationCode.id}
+                  label={FormTexts.confirmationCode.label}
+                  wrapperClassName={commonFormFieldsClassnames.wrapper}
+                  inputProps={{
+                    type: FormTexts.confirmationCode.typeField,
+                    placeholder: FormTexts.confirmationCode.fieldPlaceholder,
+                    value: confirmationCodeField,
+                    onChange: (e) => setConfirmationCodeField(e.target.value),
+                    disabled: isLoading,
+                  }}
+                  buttonProps={{
+                    onClick: () => {
+                      handleOrderLookup();
+                    },
+                    variant: 'default',
+                    disabled: isLoading || !orderNumberField.trim() || !confirmationCodeField.trim(),
+                  }}
+                  required={FormTexts.confirmationCode.required}
+                  validators={FormTexts.confirmationCode.validators || []}
+                  buttonText={FormTexts.orderNumber.buttonText!(isLoading)}
+                  alertVariant="destructive"
+                />
+                {renderMainForm()}
+              </CardContent>
+
+              <CardFooter>
+                {(() => {
+                  const effectiveFormType = getEffectiveFormType();
 
 
-              if (!effectiveFormType) return null;
-              
-              // Si la orden no está pagada y no estamos en modo bypass, no mostrar el footer
-              if (order.id && order.id !== 'bypass-mode' && !orderValidation?.allowBypass && !isOrderPaid()) {
-                return null;
-              }
+                  if (!effectiveFormType) return null;
+
+                  // Si la orden no está pagada y no estamos en modo bypass, no mostrar el footer
+                  if (order.id && order.id !== 'bypass-mode' && !orderValidation?.allowBypass && !isOrderPaid()) {
+                    return null;
+                  }
 
 
-              let validationResult, isFormComplete;
+                  let validationResult, isFormComplete;
 
-              if (effectiveFormType === 'tutela') {
-                validationResult = validateTutelaForm();
-                isFormComplete = isTutelaFormComplete;
-              } else if (effectiveFormType === 'peticion') {
-                validationResult = validatePeticionForm();
-                isFormComplete = effectiveIsPeticionFormComplete;
-              } else if (effectiveFormType === 'transito') {
-                const unifiedValidation = validateTransitoFieldsBasedOnRendering();
-                // Convertir al formato esperado por la UI
-                validationResult = {
-                  isValid: unifiedValidation.isValid,
-                  errors: Object.entries(unifiedValidation.errors).map(([fieldId, message]) => ({
-                    fieldId,
-                    message
-                  })),
-                  validFields: unifiedValidation.validatedFields,
-                  invalidFields: Object.keys(unifiedValidation.errors)
-                };
-                isFormComplete = effectiveIsTransitoFormComplete;
-              } else {
-                validationResult = { isValid: false, errors: [], validFields: [], invalidFields: [] };
-                isFormComplete = false;
-              }
+                  if (effectiveFormType === 'tutela') {
+                    validationResult = validateTutelaForm();
+                    isFormComplete = isTutelaFormComplete;
+                  } else if (effectiveFormType === 'peticion') {
+                    validationResult = validatePeticionForm();
+                    isFormComplete = effectiveIsPeticionFormComplete;
+                  } else if (effectiveFormType === 'transito') {
+                    const unifiedValidation = validateTransitoFieldsBasedOnRendering();
+                    // Convertir al formato esperado por la UI
+                    validationResult = {
+                      isValid: unifiedValidation.isValid,
+                      errors: Object.entries(unifiedValidation.errors).map(([fieldId, message]) => ({
+                        fieldId,
+                        message
+                      })),
+                      validFields: unifiedValidation.validatedFields,
+                      invalidFields: Object.keys(unifiedValidation.errors)
+                    };
+                    isFormComplete = effectiveIsTransitoFormComplete;
+                  } else {
+                    validationResult = { isValid: false, errors: [], validFields: [], invalidFields: [] };
+                    isFormComplete = false;
+                  }
 
-              // Validación combinada del formulario principal + footer
-              const footerValidation = validateFooterFields();
-              const combinedValidation = {
-                isValid: validationResult.isValid && footerValidation.isValid,
-                errors: [...validationResult.errors, ...footerValidation.errors],
-                validFields: [...validationResult.validFields, ...footerValidation.validFields],
-                invalidFields: [...validationResult.invalidFields, ...footerValidation.invalidFields]
-              };
+                  // Validación combinada del formulario principal + footer
+                  const footerValidation = validateFooterFields();
+                  const combinedValidation = {
+                    isValid: validationResult.isValid && footerValidation.isValid,
+                    errors: [...validationResult.errors, ...footerValidation.errors],
+                    validFields: [...validationResult.validFields, ...footerValidation.validFields],
+                    invalidFields: [...validationResult.invalidFields, ...footerValidation.invalidFields]
+                  };
 
-              const isButtonEnabled = combinedValidation.isValid && isFormComplete && isFooterComplete && !isSubmitting && !(orderValidation?.isProcessed && !orderValidation?.allowBypass);
+                  const isButtonEnabled = combinedValidation.isValid && isFormComplete && isFooterComplete && !isSubmitting && !(orderValidation?.isProcessed && !orderValidation?.allowBypass);
 
-              const getButtonVariant = (): "default" | "destructive" | "secondary" => {
-                if (!isFormComplete || !isFooterComplete || !combinedValidation.isValid) return "secondary";
-                return "default";
-              };
+                  const getButtonVariant = (): "default" | "destructive" | "secondary" => {
+                    if (!isFormComplete || !isFooterComplete || !combinedValidation.isValid) return "secondary";
+                    return "default";
+                  };
 
-              return (
-                <div className="space-y-4 w-full">
-                  {/* Campos para email de entrega */}
-                  <div className="space-y-3 border-t pt-4">
+                  return (
+                    <div className="space-y-4 w-full">
+                      {/* Campos para email de entrega */}
+                      <div className="space-y-3 border-t pt-4">
 
-                    {/* Campo de email de entrega */}
-                    <FormActionInput
-                      id={FormTexts.footer.deliveryEmail.id}
-                      label={FormTexts.footer.deliveryEmail.label}
-                      labelProps={{ className: "text-sm text-gray-700" }}
-                      wrapperClassName="space-y-2"
-                      inputProps={{
-                        type: FormTexts.footer.deliveryEmail.typeField,
-                        placeholder: FormTexts.footer.deliveryEmail.fieldPlaceholder,
-                        value: deliveryEmail,
-                        onChange: (e) => setDeliveryEmail(e.target.value),
-                        disabled: isSubmitting || usePreviousEmail,
-                      }}
-                      required={FormTexts.footer.deliveryEmail.required}
-                      validators={usePreviousEmail ? [] : (FormTexts.footer.deliveryEmail.validators || [])} // Limpiar validaciones cuando checkbox esté activo
-                      clearError={usePreviousEmail} // Limpiar errores cuando se active el checkbox
-                      alertVariant="destructive"
-                    />
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={FormTexts.footer.usePreviousEmail.id}
-                        checked={usePreviousEmail}
-                        onChange={(e) => setUsePreviousEmail(e.target.checked)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        disabled={isSubmitting || !getCurrentFormEmail()}
-                      />
-                      <label
-                        htmlFor={FormTexts.footer.usePreviousEmail.id}
-                        className="text-sm text-gray-700 cursor-pointer"
-                      >
-                        {FormTexts.footer.usePreviousEmail.label}
-                      </label>
+                        {/* Campo de email de entrega */}
+                        <FormActionInput
+                          id={FormTexts.footer.deliveryEmail.id}
+                          label={FormTexts.footer.deliveryEmail.label}
+                          labelProps={{ className: "text-sm text-gray-700" }}
+                          wrapperClassName="space-y-2"
+                          inputProps={{
+                            type: FormTexts.footer.deliveryEmail.typeField,
+                            placeholder: FormTexts.footer.deliveryEmail.fieldPlaceholder,
+                            value: deliveryEmail,
+                            onChange: (e) => setDeliveryEmail(e.target.value),
+                            disabled: isSubmitting || usePreviousEmail,
+                          }}
+                          required={FormTexts.footer.deliveryEmail.required}
+                          validators={usePreviousEmail ? [] : (FormTexts.footer.deliveryEmail.validators || [])} // Limpiar validaciones cuando checkbox esté activo
+                          clearError={usePreviousEmail} // Limpiar errores cuando se active el checkbox
+                          alertVariant="destructive"
+                        />
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={FormTexts.footer.usePreviousEmail.id}
+                            checked={usePreviousEmail}
+                            onChange={(e) => setUsePreviousEmail(e.target.checked)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            disabled={isSubmitting || !getCurrentFormEmail()}
+                          />
+                          <label
+                            htmlFor={FormTexts.footer.usePreviousEmail.id}
+                            className="text-sm text-gray-700 cursor-pointer"
+                          >
+                            {FormTexts.footer.usePreviousEmail.label}
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Botón de envío */}
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleFormSubmit}
+                          disabled={!isButtonEnabled}
+                          variant={getButtonVariant()}
+                          size="lg"
+                          className="min-w-[200px]"
+                        >
+                          {FormTexts.footer.buttonText(isSubmitting)}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-
-                  {/* Botón de envío */}
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleFormSubmit}
-                      disabled={!isButtonEnabled}
-                      variant={getButtonVariant()}
-                      size="lg"
-                      className="min-w-[200px]"
-                    >
-                      {FormTexts.footer.buttonText(isSubmitting)}
-                    </Button>
-                  </div>
-                </div>
-              );
-            })()}
-          </CardFooter>
-        </Card>
+                  );
+                })()}
+              </CardFooter>
+            </Card>
+          </Card>
+        </main>
       </div>
     </>
   )

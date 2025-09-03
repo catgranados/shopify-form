@@ -33,10 +33,12 @@ const FormTexts = {
   subTitle: (service: string) =>
     service ? `Generar ${service}` : "Generar Documento Legal",
   formDescription: {
+    bypassTitle: "Bienvenida Catalina",
+    bypassMessage: "Selecciona el tipo de formulario que deseas generar.",
     orderNumber: "Nº Pedido:",
     orderDate: "Fecha de pedido:",
     orderStatus: "Estado del pedido:",
-    unloadedDataMsg: `Para obtener tu documento debes tener el <strong>Número de pedido</strong> y el <strong>Código de confirmación</strong> generados al adquirir el servicio.`,
+    unloadedDataMsg: `Para obtener tu documento debes tener el <strong>Número de pedido</strong> y el <strong>Código de confirmación</strong> generados al adquirir el servicio. Para más información revisa nuestras guías.`,
     unpaidOrderMsg:
       "Este pedido aún no ha sido pagado. Para procesar tu documento, el pedido debe estar en estado 'Pagado'.",
     unpaidOrderSuggestion:
@@ -52,8 +54,6 @@ const FormTexts = {
     emailAddress: (email: string) => `<strong>Enviado a:</strong> ${email}`,
     disagreementSuggestion:
       "Si consideras que hay un error, por favor contáctanos a través de los medios en",
-    disagreementLinkText:
-      "https://zmx327-hu.myshopify.com/policies/contact-information",
   },
   orderNumber: {
     id: "orderNumber",
@@ -586,6 +586,10 @@ const FormTexts = {
       errorMessage: "",
       validators: [],
     } as FieldProps,
+  },
+  isSubmitting: {
+    title: "Procesando formulario...",
+    message: "Por favor espera mientras procesamos tu solicitud",
   },
 };
 

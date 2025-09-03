@@ -182,7 +182,7 @@ const FormField: React.FC<FormFieldProps> = ({
           variant={alertVariant} 
           id={`${id}-error`}
           {...(alertProps as unknown as Record<string, unknown>)} 
-          className={cn('mt-4', alertProps?.className)}
+          className={cn('border-0 px-0 pt-0', alertProps?.className)}
         >
           {errorToShow.alertTitle && <AlertTitle>{errorToShow.alertTitle}</AlertTitle>}
           {errorToShow.alertDescription && <AlertDescription>{errorToShow.alertDescription}</AlertDescription>}
