@@ -9,8 +9,11 @@ export type TutelaDataType = {
   typeId: string;
   idNumber: string;
   email: string;
+  documentCity: string;
+  documentDate: string;
   address: string;
-  city_state: string;
+  city: string;
+  state: string;
   phone: string;
   guiltyParty: string;
   facts: string;
@@ -22,11 +25,15 @@ export type PeticionDataType = {
   userName: string;
   typeId: string;
   idNumber: string;
-  cityDate: string;
+  documentCity: string;
+  documentDate: string;
+  city: string;
+  date: string;
   targetEntity: string;
   petitionRequest: string;
   petitionReasons: string;
   responseAddress: string;
+  responseCity: string;
   responseEmail: string;
 };
 
@@ -35,6 +42,8 @@ export type TransitoDataType = {
   userName: string;
   typeId: string;
   idNumber: string;
+  documentCity: string;
+  documentDate: string;
   notificationAddress: string;
   notificationCity: string;
   notificationEmail: string;
@@ -167,8 +176,11 @@ export function createInitialFormData(formType: FormType): FormDataUnion {
         typeId: '',
         idNumber: '',
         email: '',
+        documentCity: '',
+        documentDate: '',
         address: '',
-        city_state: '',
+        city: '',
+        state: '',
         phone: '',
         guiltyParty: '',
         facts: '',
@@ -181,11 +193,15 @@ export function createInitialFormData(formType: FormType): FormDataUnion {
         userName: '',
         typeId: '',
         idNumber: '',
-        cityDate: '',
+        documentCity: '',
+        documentDate: '',
+        city: '',
+        date: '',
         targetEntity: '',
         petitionRequest: '',
         petitionReasons: '',
         responseAddress: '',
+        responseCity: '',
         responseEmail: ''
       } as PeticionDataType;
     
@@ -195,6 +211,8 @@ export function createInitialFormData(formType: FormType): FormDataUnion {
         userName: '',
         typeId: '',
         idNumber: '',
+        documentCity: '',
+        documentDate: '',
         notificationAddress: '',
         notificationCity: '',
         notificationEmail: '',

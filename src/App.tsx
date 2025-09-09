@@ -66,8 +66,11 @@ function App () {
     typeId: '',
     idNumber: '',
     email: '',
+    documentCity: '',
+    documentDate: '',
     address: '',
-    city_state: '',
+    city: '',
+    state: '',
     phone: '',
     guiltyParty: '',
     facts: '',
@@ -88,11 +91,15 @@ function App () {
     userName: '',
     typeId: '',
     idNumber: '',
-    cityDate: '',
+    documentCity: '',
+    documentDate: '',
+    city: '',
+    date: '',
     targetEntity: '',
     petitionRequest: '',
     petitionReasons: '',
     responseAddress: '',
+    responseCity: '',
     responseEmail: ''
   };
 
@@ -109,6 +116,8 @@ function App () {
     userName: '',
     typeId: '',
     idNumber: '',
+    documentCity: '',
+    documentDate: '',
     notificationAddress: '',
     notificationCity: '',
     notificationEmail: '',
@@ -130,7 +139,8 @@ function App () {
   const {
     formData: transitoData,
     updateField: updateTransitoField,
-    isFormComplete: isTransitoFormComplete
+    isFormComplete: isTransitoFormComplete,
+    resetForm: resetTransitoForm
   } = useFormManager(initialTransitoData, order.items[0].title);
 
   // Hook para renderizado condicional de tránsito
@@ -252,6 +262,118 @@ function App () {
     wrapper: "space-y-3",
     labelClassname: "text-muted-foreground"
   }
+
+  // Helper functions para campos comunes
+  const getCurrentFormData = () => {
+    const effectiveFormType = getEffectiveFormType();
+    if (effectiveFormType === 'tutela') return tutelaData;
+    if (effectiveFormType === 'peticion') return peticionData;
+    if (effectiveFormType === 'transito') return transitoData;
+    return null;
+  };
+
+  const getUpdateFunction = () => {
+    const effectiveFormType = getEffectiveFormType();
+    if (effectiveFormType === 'tutela') return updateTutelaField;
+    if (effectiveFormType === 'peticion') return updatePeticionField;
+    if (effectiveFormType === 'transito') return updateTransitoField;
+    return null;
+  };
+
+  // Función para renderizar campos comunes
+  const renderCommonFields = () => {
+    const currentFormData = getCurrentFormData();
+    const updateFunction = getUpdateFunction();
+    
+    if (!currentFormData || !updateFunction) {
+      return [];
+    }
+
+    return Object.entries(FormTexts.common).map(([key, value]) => {
+      const fieldKey = key as keyof typeof currentFormData;
+
+      if (value.typeComponent === "textarea") {
+        return (
+          <FormTextarea
+            key={value.id}
+            id={value.id}
+            label={value.label}
+            labelProps={{ className: commonFormFieldsClassnames.labelClassname }}
+            wrapperClassName={commonFormFieldsClassnames.wrapper}
+            textareaProps={{
+              placeholder: value.fieldPlaceholder,
+              value: currentFormData[fieldKey] as string,
+              onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => updateFunction(fieldKey, e.target.value),
+              disabled: isLoading,
+            }}
+            required={value.required}
+            validators={value.validators || []}
+            alertVariant="destructive"
+          />
+        )
+      } else if (value.typeComponent === "multiInput") {
+        return (
+          <FormMultiInput
+            key={value.id}
+            id={value.id}
+            label={value.label}
+            inputType={value.multiInputType!}
+            options={value.multiInputOptions! as MultiInputOption<string>[]}
+            selectedValues={Array.isArray(currentFormData[fieldKey]) ? currentFormData[fieldKey] as string[] : [currentFormData[fieldKey] as string].filter(Boolean)}
+            onChange={(values: string[]) => updateFunction(fieldKey, values)}
+            layout={value.multiInputLayout || 'vertical'}
+            gridColumns={value.multiInputGridColumns}
+            required={value.required}
+            validators={value.validators || []}
+            alertVariant="destructive"
+            inputProps={{ disabled: isLoading }}
+            labelComponentProps={{ className: commonFormFieldsClassnames.labelClassname }}
+            wrapperClassName={commonFormFieldsClassnames.wrapper}
+          />
+        )
+      } else if (value.typeComponent === "select") {
+        return (
+          <FormSelect
+            key={value.id}
+            id={value.id}
+            label={value.label}
+            options={value.selectOptions}
+            optionGroups={value.selectOptionGroups}
+            placeholder={value.selectPlaceholder}
+            emptyMessage={value.selectEmptyMessage}
+            value={currentFormData[fieldKey] as string}
+            onValueChange={(newValue: string) => updateFunction(fieldKey, newValue)}
+            required={value.required}
+            validators={value.validators || []}
+            alertVariant="destructive"
+            selectProps={{ disabled: isLoading }}
+            labelProps={{ className: commonFormFieldsClassnames.labelClassname }}
+            wrapperClassName={commonFormFieldsClassnames.wrapper}
+          />
+        )
+      } else {
+        return (
+          <FormActionInput
+            key={value.id}
+            id={value.id}
+            label={value.label}
+            labelProps={{ className: commonFormFieldsClassnames.labelClassname }}
+            wrapperClassName={commonFormFieldsClassnames.wrapper}
+            inputProps={{
+              type: value.typeField || "text",
+              placeholder: value.fieldPlaceholder,
+              value: currentFormData[fieldKey] as string,
+              onChange: (e: React.ChangeEvent<HTMLInputElement>) => updateFunction(fieldKey, e.target.value),
+              disabled: isLoading,
+            }}
+            required={value.required}
+            validators={value.validators || []}
+            alertVariant="destructive"
+          />
+        )
+      }
+    });
+  };
 
 
   useEffect(() => {
@@ -424,6 +546,7 @@ function App () {
       });
 
       if (result.success) {
+        resetFormToInitialState();
         toast.success(result.message);
         if (result.documentUrl) {
           appLog('📄 Documento generado:', result.documentUrl);
@@ -863,6 +986,48 @@ function App () {
     }
   };
 
+  // Función para resetear todo el formulario al estado inicial
+  const resetFormToInitialState = () => {
+    // Resetear campos de búsqueda de orden
+    setOrderNumberField('');
+    setConfirmationCodeField('');
+    
+    // Resetear validación de orden
+    setOrderValidation(null);
+    setBypassFormType('');
+    
+    // Resetear orden
+    setOrder({
+      id: '',
+      orderNumber: '',
+      amount: 0,
+      date: '',
+      status: '',
+      items: [{
+        title: '',
+        quantity: 0,
+        price: 0
+      }]
+    });
+    
+    // Resetear formularios específicos
+    resetTutelaForm();
+    resetPeticionForm();
+    resetTransitoForm();
+    
+    // Resetear campos del footer
+    setDeliveryEmail('');
+    setUsePreviousEmail(false);
+    
+    // Resetear prompt files
+    setPromptFiles({});
+    
+    // Resetear estado de búsqueda completada
+    setOrderLookupCompleted(false);
+    
+    appLog('🔄 Formulario reseteado al estado inicial');
+  };
+
   const renderHeader = () => {
     // Primero verificar si la orden fue procesada
     if (orderValidation?.isProcessed) {
@@ -978,7 +1143,14 @@ function App () {
 
 
     if (effectiveFormType) {
+      // Primero renderizar campos comunes
+      mainContent.push(
+        <>
+          {renderCommonFields()}
+        </>
+      );
 
+      // Luego renderizar campos específicos
       if (effectiveFormType === "tutela") {
         mainContent.push(
           <>
@@ -1033,7 +1205,7 @@ function App () {
         </header>
         <main className='flex-1 bg-background flex items-center justify-center p-4'>
           <Card className='bg-foreground md:p-22 '>
-            <Card className="bg-background scrollbar-balanced max-h-full overflow-auto max-w-xl">
+            <Card className="bg-background scrollbar-balanced max-h-full overflow-auto max-w-xl md:min-w-xl">
               <CardHeader className="space-y-2">
                 <CardTitle>
                   <div className='flex flex-col md:flex-row items-center gap-2 justify-center'>

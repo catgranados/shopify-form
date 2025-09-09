@@ -8,9 +8,11 @@ interface GenericConditionalRule {
   // Campo del cual depende la condición
   dependsOn: string;
   // Valores que hacen que la condición sea verdadera
-  when: string | string[];
+  when: string | string[] | readonly string[];
   // Tipo de validación
   type: 'show' | 'require';
+  // Modo de comparación opcional (para compatibilidad con tránsito)
+  matchMode?: 'exact' | 'contains' | 'containsAll';
 }
 
 interface GenericFormField {
@@ -42,9 +44,40 @@ export function evaluateGenericCondition<T extends Record<string, unknown>>(
   rule: GenericConditionalRule,
   formData: T
 ): boolean {
-  const dependentValue = formData[rule.dependsOn];
-  const whenValues = Array.isArray(rule.when) ? rule.when : [rule.when];
-  return whenValues.includes(String(dependentValue));
+  const fieldValue = String(formData[rule.dependsOn] || '');
+  const matchMode = rule.matchMode || 'exact'; // Default a exact match
+  
+  // Manejar diferentes modos de comparación
+  switch (matchMode) {
+    case 'containsAll':
+      // El valor del campo debe contener todas las palabras especificadas en 'when'
+      if (Array.isArray(rule.when)) {
+        const lowerFieldValue = fieldValue.toLowerCase();
+        return rule.when.every(word => 
+          lowerFieldValue.includes(String(word).toLowerCase())
+        );
+      } else {
+        return fieldValue.toLowerCase().includes(String(rule.when).toLowerCase());
+      }
+    
+    case 'contains':
+      // El valor del campo debe contener al menos una de las palabras especificadas
+      if (Array.isArray(rule.when)) {
+        const lowerFieldValue = fieldValue.toLowerCase();
+        return rule.when.some(word => 
+          lowerFieldValue.includes(String(word).toLowerCase())
+        );
+      } else {
+        return fieldValue.toLowerCase().includes(String(rule.when).toLowerCase());
+      }
+    
+    case 'exact':
+    default: {
+      // Comportamiento original - coincidencia exacta
+      const whenValues = Array.isArray(rule.when) ? rule.when : [rule.when];
+      return whenValues.includes(fieldValue);
+    }
+  }
 }
 
 /**

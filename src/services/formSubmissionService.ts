@@ -349,7 +349,7 @@ class FormSubmissionService {
 
     if (request.formType === 'peticion') {
       const peticionData = request.formData as Record<string, string>;
-      const requiredFields = ['userName', 'idNumber', 'cityDate', 'targetEntity', 'petitionRequest', 'petitionReasons', 'responseEmail'];
+      const requiredFields = ['userName', 'idNumber', 'city', 'date', 'targetEntity', 'petitionRequest', 'petitionReasons', 'responseEmail'];
       
       requiredFields.forEach(field => {
         if (!peticionData[field] || peticionData[field].trim() === '') {

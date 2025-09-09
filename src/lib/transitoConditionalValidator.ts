@@ -7,9 +7,11 @@ export interface ConditionalRule {
   // Campo que debe ser evaluado
   dependsOn: keyof TransitoDataType;
   // Valores que hacen que la condición sea verdadera
-  when: string | string[];
+  when: string | string[] | readonly string[];
   // Tipo de validación
   type: 'show' | 'require';
+  // Modo de comparación opcional
+  matchMode?: 'exact' | 'contains' | 'containsAll';
 }
 
 // Configuración de campos condicionales para tránsito
@@ -19,8 +21,9 @@ export const transitoConditionalFields = {
   // Razón para audiencia virtual - DEBE MOSTRARSE Y SER REQUERIDA
   virtualAudienceReason: {
     dependsOn: 'procedureType' as keyof TransitoDataType,
-    when: 'audiencia-virtual',
-    type: 'show' as const // Cambiar a 'show' para controlar visibilidad
+    when: ['audiencia', 'virtual'],
+    type: 'show' as const,
+    matchMode: 'containsAll' as const
   }
 } as const;
 
@@ -30,12 +33,40 @@ export function evaluateCondition(
   formData: TransitoDataType
 ): boolean {
   const fieldValue = formData[rule.dependsOn];
+  const matchMode = rule.matchMode || 'exact'; // Default a exact match
   
-  if (Array.isArray(rule.when)) {
-    return rule.when.includes(fieldValue);
+  // Manejar diferentes modos de comparación
+  switch (matchMode) {
+    case 'containsAll':
+      // El valor del campo debe contener todas las palabras especificadas en 'when'
+      if (Array.isArray(rule.when)) {
+        const lowerFieldValue = fieldValue.toLowerCase();
+        return rule.when.every(word => 
+          lowerFieldValue.includes(word.toLowerCase())
+        );
+      } else {
+        return fieldValue.toLowerCase().includes((rule.when as string).toLowerCase());
+      }
+    
+    case 'contains':
+      // El valor del campo debe contener al menos una de las palabras especificadas
+      if (Array.isArray(rule.when)) {
+        const lowerFieldValue = fieldValue.toLowerCase();
+        return rule.when.some(word => 
+          lowerFieldValue.includes(word.toLowerCase())
+        );
+      } else {
+        return fieldValue.toLowerCase().includes((rule.when as string).toLowerCase());
+      }
+    
+    case 'exact':
+    default:
+      // Comportamiento original - coincidencia exacta
+      if (Array.isArray(rule.when)) {
+        return rule.when.includes(fieldValue);
+      }
+      return fieldValue === rule.when;
   }
-  
-  return fieldValue === rule.when;
 }
 
 // Función para determinar si un campo debe mostrarse
